@@ -20,7 +20,7 @@ class AudioRTCDriver(MediaStreamTrack):
             self._start = time.time() + data_time
         else:
             wait = self._start - time.time() - 0.005
-            self._start += data_time
+            self._start = time.time() + data_time
             if wait > 0:
                 await asyncio.sleep(wait)
         frame = await self.audio_output_q.get()

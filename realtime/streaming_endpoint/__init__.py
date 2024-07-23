@@ -87,9 +87,9 @@ def streaming_endpoint():
                 await asyncio.gather(*tasks)
 
             except asyncio.CancelledError:
-                print("streaming_endpoint: CancelledError")
+                logging.error("streaming_endpoint: CancelledError")
             except Exception as e:
-                print("Error in streaming_endpoint: ", e)
+                logging.error("Error in streaming_endpoint: ", e)
             finally:
                 logging.info("Received exit, stopping bot")
                 try:

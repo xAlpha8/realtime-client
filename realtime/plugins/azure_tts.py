@@ -73,6 +73,7 @@ class AzureTTS(Plugin):
         self.viseme_stream = TextStream()
         self._viseme_data = {"mouthCues": []}
         self._generating = False
+        self._task = None
         self.thread_pool_executor = ThreadPoolExecutor(max_workers=1)
 
         self._stream = stream
@@ -157,7 +158,8 @@ class AzureTTS(Plugin):
             self._generating = False
 
     async def close(self):
-        self._task.cancel()
+        if self._task:
+            self._task.cancel()
 
     async def _interrupt(self):
         while True:

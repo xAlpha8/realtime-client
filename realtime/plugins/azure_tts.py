@@ -156,6 +156,7 @@ class AzureTTS(Plugin):
                 audio_data = result.audio_data
                 logger.info("Azure TTS TTFB: %s", time.time() - start_time)
                 await self.output_queue.put(audio_data)
+            self._viseme_data = {"mouthCues": []}
 
             self._generating = False
 

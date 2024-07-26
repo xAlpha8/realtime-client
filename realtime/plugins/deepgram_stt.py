@@ -24,7 +24,7 @@ class DeepgramSTT(Plugin):
         *,
         language="en-US",
         detect_language: bool = False,
-        interim_results: bool = True,
+        interim_results: bool = False,
         punctuate: bool = True,
         smart_format: bool = True,
         model="nova-2",
@@ -81,6 +81,7 @@ class DeepgramSTT(Plugin):
             "sample_rate": self._sample_rate,
             "channels": self._num_channels,
             "endpointing": self.endpointing,
+            "interim_results": self.interim_results,
         }
 
         live_config["language"] = self.language

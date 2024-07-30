@@ -77,12 +77,12 @@ def streaming_endpoint():
                         ssl_certfile=os.environ["SSL_CERT_PATH"],
                     ),
                 )
-                server_task = asyncio.create_task(server.serve())
 
                 tasks = [
                     asyncio.create_task(video_output_frame_processor.run_input()),
                     asyncio.create_task(audio_output_frame_processor.run_input()),
                     asyncio.create_task(text_output_processor.run_input()),
+                    asyncio.create_task(server.serve()),
                 ]
                 await asyncio.gather(*tasks)
 

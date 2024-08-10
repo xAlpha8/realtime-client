@@ -11,7 +11,7 @@ os.environ["TORIO_USE_FFMPEG_VERSION"] = "7"
 import torchaudio  # noqa: F401
 
 from realtime.plugins.base_plugin import Plugin
-from realtime.utils.cloneable_queue import CloneableQueue
+from realtime.streams import ByteStream, TextStream
 
 
 class SileroVAD(Plugin):
@@ -37,10 +37,10 @@ class SileroVAD(Plugin):
         self.sensitivity_threshold = sensitivity_threshold
 
         self._loop: asyncio.AbstractEventLoop = asyncio.get_running_loop()
-        self.output_queue = CloneableQueue()
+        self.output_queue = TextStream()
         self.user_speaking = False
 
-    async def run(self, input_queue: CloneableQueue) -> CloneableQueue:
+    async def run(self, input_queue: ByteStream) -> TextStream:
         self.input_queue = input_queue
         self._vad_thread = threading.Thread(target=self.execute_vad, daemon=True)
         self._vad_thread.start()

@@ -27,7 +27,7 @@ class AudioStream(Stream):
 
     def put_nowait(self, item):
         """Put an item in all queues of all instances."""
-        if type(item) != AudioData:
+        if not isinstance(item, AudioData):
             raise ValueError("AudioStream can only accept AudioData")
         super().put_nowait(item)
         for clone in self._clones:
@@ -48,7 +48,7 @@ class VideoStream(Stream):
 
     def put_nowait(self, item):
         """Put an item in all queues of all instances."""
-        if type(item) != ImageData:
+        if not isinstance(item, ImageData):
             raise ValueError("VideoStream can only accept ImageData")
         super().put_nowait(item)
         for clone in self._clones:
@@ -70,7 +70,7 @@ class TextStream(Stream):
 
     def put_nowait(self, item):
         """Put an item in all queues of all instances."""
-        if type(item) != TextData:
+        if not isinstance(item, TextData):
             raise ValueError("TextStream can only accept TextData")
         super().put_nowait(item)
         for clone in self._clones:
@@ -92,7 +92,7 @@ class ByteStream(Stream):
 
     def put_nowait(self, item):
         """Put an item in all queues of all instances."""
-        if type(item) != ByteData:
+        if not isinstance(item, ByteData):
             raise ValueError("ByteStream can only accept ByteData")
         super().put_nowait(item)
         for clone in self._clones:

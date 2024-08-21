@@ -26,6 +26,7 @@ class RealtimeServer:
         self.PORT = int(os.getenv("HTTP_PORT", 8080))
 
     async def start(self):
+        self.app.add_api_route("/connections", lambda: {"connections": ["test_connection"]}, methods=["GET"])
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ssl_context.load_cert_chain(os.environ["SSL_CERT_PATH"], keyfile=os.environ["SSL_KEY_PATH"])
         self.server = uvicorn.Server(
@@ -39,6 +40,7 @@ class RealtimeServer:
             )
         )
         await self.server.serve()
+
 
     def get_app(self):
         return self.app

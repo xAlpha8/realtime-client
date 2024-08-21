@@ -91,7 +91,7 @@ class ElevenLabsTTS(Plugin):
                             self.output_queue.put_nowait(chunk)
                 else:
                     self.output_queue.put_nowait(await r.read())
-
+                self.output_queue.put_nowait(None)
                 self._generating = False
 
     async def close(self):

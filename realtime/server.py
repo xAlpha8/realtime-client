@@ -1,4 +1,5 @@
 import os
+import ssl
 import uvicorn
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,16 +26,16 @@ class RealtimeServer:
         self.PORT = int(os.getenv("HTTP_PORT", 8080))
 
     async def start(self):
-        # ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        # ssl_context.load_cert_chain(os.environ["SSL_CERT_PATH"], keyfile=os.environ["SSL_KEY_PATH"])
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_context.load_cert_chain(os.environ["SSL_CERT_PATH"], keyfile=os.environ["SSL_KEY_PATH"])
         self.server = uvicorn.Server(
             config=uvicorn.Config(
                 self.app,
                 host=self.HOSTNAME,
                 port=self.PORT,
-                log_level="debug",
-                # ssl_keyfile=os.environ["SSL_KEY_PATH"],
-                # ssl_certfile=os.environ["SSL_CERT_PATH"],
+                log_level="info",
+                ssl_keyfile=os.environ["SSL_KEY_PATH"],
+                ssl_certfile=os.environ["SSL_CERT_PATH"],
             )
         )
         await self.server.serve()

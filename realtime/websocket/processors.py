@@ -18,8 +18,6 @@ class WebsocketInputStream:
 
     Attributes:
         ws (WebSocket): The WebSocket connection.
-        audio_output_stream (AudioStream): Stream for audio data.
-        message_stream (TextStream): Stream for text messages.
     """
 
     def __init__(self, ws: WebSocket):
@@ -85,6 +83,8 @@ class WebsocketOutputStream:
         Args:
             audio_stream (AudioStream): The audio stream to send.
             message_stream (TextStream): The text stream to send.
+            video_stream (VideoStream): The video stream to send.
+            byte_stream (ByteStream): The byte stream to send.
         """
         await asyncio.gather(self.task(byte_stream), self.task(message_stream))
 

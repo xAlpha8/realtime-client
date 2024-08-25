@@ -17,6 +17,7 @@ from realtime.streams import ByteStream, TextStream
 
 logger = logging.getLogger(__name__)
 
+MICROSECONDS_PER_SECOND = 1000000.0
 
 viseme_id_to_mouth_shapes = {
     0: "X",
@@ -92,16 +93,18 @@ class AzureTTS(Plugin):
     def viseme_received_cb(self, evt: speechsdk.SessionEventArgs):
         if (
             len(self._viseme_data["mouthCues"]) > 0
-            and (evt.audio_offset) / 10000000.0 >= self._viseme_data["mouthCues"][-1]["end"]
+            and (evt.audio_offset) / MICROSECONDS_PER_SECOND >= self._viseme_data["mouthCues"][-1]["end"]
         ):
-            self._viseme_data["mouthCues"][-1]["end"] = (evt.audio_offset) / 10000000.0
+            self._viseme_data["mouthCues"][-1]["end"] = (evt.audio_offset) / MICROSECONDS_PER_SECOND
             # TODO: deprecate value key. keeping it for now for backwards compatibility
             self._viseme_data["mouthCues"].append(
                 {
                     "value": viseme_id_to_mouth_shapes[evt.viseme_id],
                     "azure_viseme_id": evt.viseme_id,
-                    "start": (evt.audio_offset) / 10000000.0 if len(self._viseme_data["mouthCues"]) > 0 else 0.0,
-                    "end": (evt.audio_offset + 1000000.0) / 10000000.0,
+                    "start": (evt.audio_offset) / MICROSECONDS_PER_SECOND
+                    if len(self._viseme_data["mouthCues"]) > 0
+                    else 0.0,
+                    "end": (evt.audio_offset + MICROSECONDS_PER_SECOND) / MICROSECONDS_PER_SECOND,
                 }
             )
             self.viseme_stream.put_nowait(json.dumps(self._viseme_data))
@@ -112,8 +115,10 @@ class AzureTTS(Plugin):
                 {
                     "value": viseme_id_to_mouth_shapes[evt.viseme_id],
                     "azure_viseme_id": evt.viseme_id,
-                    "start": (evt.audio_offset) / 10000000.0 if len(self._viseme_data["mouthCues"]) > 0 else 0.0,
-                    "end": (evt.audio_offset + 1000000.0) / 10000000.0,
+                    "start": (evt.audio_offset) / MICROSECONDS_PER_SECOND
+                    if len(self._viseme_data["mouthCues"]) > 0
+                    else 0.0,
+                    "end": (evt.audio_offset + MICROSECONDS_PER_SECOND) / MICROSECONDS_PER_SECOND,
                 }
             )
             self.viseme_stream.put_nowait(json.dumps(self._viseme_data))

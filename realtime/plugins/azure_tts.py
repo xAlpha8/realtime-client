@@ -1,6 +1,6 @@
-from concurrent.futures import ThreadPoolExecutor
 import faulthandler
 import json
+from concurrent.futures import ThreadPoolExecutor
 
 faulthandler.enable()
 
@@ -10,11 +10,10 @@ import logging
 import os
 import time
 
-import aiohttp
+import azure.cognitiveservices.speech as speechsdk
 
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import ByteStream, TextStream
-import azure.cognitiveservices.speech as speechsdk
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +95,11 @@ class AzureTTS(Plugin):
             and (evt.audio_offset) / 10000000.0 >= self._viseme_data["mouthCues"][-1]["end"]
         ):
             self._viseme_data["mouthCues"][-1]["end"] = (evt.audio_offset) / 10000000.0
+            # TODO: deprecate value key. keeping it for now for backwards compatibility
             self._viseme_data["mouthCues"].append(
                 {
                     "value": viseme_id_to_mouth_shapes[evt.viseme_id],
+                    "azure_viseme_id": evt.viseme_id,
                     "start": (evt.audio_offset) / 10000000.0 if len(self._viseme_data["mouthCues"]) > 0 else 0.0,
                     "end": (evt.audio_offset + 1000000.0) / 10000000.0,
                 }
@@ -106,9 +107,11 @@ class AzureTTS(Plugin):
             self.viseme_stream.put_nowait(json.dumps(self._viseme_data))
 
         elif len(self._viseme_data["mouthCues"]) == 0:
+            # TODO: deprecate value key. keeping it for now for backwards compatibility
             self._viseme_data["mouthCues"].append(
                 {
                     "value": viseme_id_to_mouth_shapes[evt.viseme_id],
+                    "azure_viseme_id": evt.viseme_id,
                     "start": (evt.audio_offset) / 10000000.0 if len(self._viseme_data["mouthCues"]) > 0 else 0.0,
                     "end": (evt.audio_offset + 1000000.0) / 10000000.0,
                 }

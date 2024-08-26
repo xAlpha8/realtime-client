@@ -17,8 +17,10 @@ from realtime.streams import ByteStream, TextStream
 
 logger = logging.getLogger(__name__)
 
-MICROSECONDS_PER_SECOND = 1000000.0
+# https://learn.microsoft.com/en-us/python/api/azure-cognitiveservices-speech/azure.cognitiveservices.speech.speechsynthesisvisemeeventargs?view=azure-python#azure-cognitiveservices-speech-speechsynthesisvisemeeventargs-audio-offset
+AUDIO_OFFSET_TICKS_PER_SECOND = 10000000.0
 
+# TODO: deprecate dictionary. keeping it for now for backwards compatibility
 viseme_id_to_mouth_shapes = {
     0: "X",
     1: "D",
@@ -90,7 +92,7 @@ class AzureTTS(Plugin):
         except Exception as e:
             logger.debug(f"Error while connecting to Azure synthesizer: {e}")
 
-    def viseme_received_cb(self, evt: speechsdk.SessionEventArgs):
+    def viseme_received_cb(self, evt: speechsdk.SpeechSynthesisVisemeEventArgs):
         if (
             len(self._viseme_data["mouthCues"]) > 0
             and (evt.audio_offset) / MICROSECONDS_PER_SECOND >= self._viseme_data["mouthCues"][-1]["end"]

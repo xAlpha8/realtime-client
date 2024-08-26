@@ -133,7 +133,7 @@ class AzureTTS(Plugin):
     async def synthesize_speech(self):
         while True:
             text_chunk = await self.input_queue.get()
-            if text_chunk is None:
+            if text_chunk is None or text_chunk == "":
                 continue
             self._generating = True
             start_time = time.time()

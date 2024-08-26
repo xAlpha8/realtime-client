@@ -93,10 +93,7 @@ class AzureTTS(Plugin):
             logger.debug(f"Error while connecting to Azure synthesizer: {e}")
 
     def viseme_received_cb(self, evt: speechsdk.SpeechSynthesisVisemeEventArgs):
-        if (
-            len(self._viseme_data["mouthCues"]) > 0
-            and (evt.audio_offset) / AUDIO_OFFSET_TICKS_PER_SECOND >= self._viseme_data["mouthCues"][-1]["end"]
-        ):
+        if len(self._viseme_data["mouthCues"]) > 0:
             self._viseme_data["mouthCues"][-1]["end"] = (evt.audio_offset) / AUDIO_OFFSET_TICKS_PER_SECOND
             # TODO: deprecate value key. keeping it for now for backwards compatibility
             self._viseme_data["mouthCues"].append(
@@ -111,7 +108,7 @@ class AzureTTS(Plugin):
             )
             self.viseme_stream.put_nowait(json.dumps(self._viseme_data))
 
-        elif len(self._viseme_data["mouthCues"]) == 0:
+        else:
             # TODO: deprecate value key. keeping it for now for backwards compatibility
             self._viseme_data["mouthCues"].append(
                 {

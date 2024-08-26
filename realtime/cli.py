@@ -18,13 +18,12 @@ def cli():
     required=True,
     metavar="FILE_PATH",
 )
-@click.option("--endpoint", required=False, help="Endpoint to send the serialized file to.")
 @click.option("--api-key", required=False, help="API key of the sending user")
 @click.option("--base-url", required=False, help="Base URL of Adapt endpoint")
-def deploy(file_path, endpoint, api_key, base_url):
+def deploy(file_path, api_key, base_url):
     """Serializes a .py file and sends it to the specified backend server."""
     BASE_URL = base_url or "https://infra.getadapt.ai"
-    endpoint = os.getenv("ADAPT_ENDPOINT") or endpoint or f"{BASE_URL}/deploy"
+    endpoint = f"{BASE_URL}/deploy"
     api_key = api_key or os.getenv("ADAPT_API_KEY")
     if not api_key:
         click.echo("No API key provided. Please set the ADAPT_API_KEY environment variable or use the --api-key flag.")

@@ -58,6 +58,7 @@ def websocket(path: str = "/"):
                     elif isinstance(s, ByteStream):
                         bq = s
 
+                # TODO: Update the default sample rate to be consistent across all plugins
                 tasks = [
                     WebsocketInputStream(websocket, audio_metadata.get("sampleRate", 48000)).run(
                         audio_stream=audio_input_q, message_stream=text_input_q, video_stream=video_input_q

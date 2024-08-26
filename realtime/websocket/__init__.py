@@ -18,7 +18,6 @@ def websocket(path: str = "/"):
     """
 
     def decorator(func):
-
         async def websocket_handler(websocket: WebSocket):
             RealtimeServer().add_connection()
             try:
@@ -60,8 +59,12 @@ def websocket(path: str = "/"):
                         bq = s
 
                 tasks = [
-                    WebsocketInputStream(websocket).run(audio_stream=audio_input_q, message_stream=text_input_q, video_stream=video_input_q),
-                    WebsocketOutputStream(websocket).run(audio_stream=aq, message_stream=tq, video_stream=vq, byte_stream=bq),
+                    WebsocketInputStream(websocket, audio_metadata.get("sampleRate", 48000)).run(
+                        audio_stream=audio_input_q, message_stream=text_input_q, video_stream=video_input_q
+                    ),
+                    WebsocketOutputStream(websocket).run(
+                        audio_stream=aq, message_stream=tq, video_stream=vq, byte_stream=bq
+                    ),
                 ]
 
                 await asyncio.gather(*tasks)

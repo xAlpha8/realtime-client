@@ -95,18 +95,18 @@ class AzureTTS(Plugin):
     def viseme_received_cb(self, evt: speechsdk.SpeechSynthesisVisemeEventArgs):
         if (
             len(self._viseme_data["mouthCues"]) > 0
-            and (evt.audio_offset) / MICROSECONDS_PER_SECOND >= self._viseme_data["mouthCues"][-1]["end"]
+            and (evt.audio_offset) / AUDIO_OFFSET_TICKS_PER_SECOND >= self._viseme_data["mouthCues"][-1]["end"]
         ):
-            self._viseme_data["mouthCues"][-1]["end"] = (evt.audio_offset) / MICROSECONDS_PER_SECOND
+            self._viseme_data["mouthCues"][-1]["end"] = (evt.audio_offset) / AUDIO_OFFSET_TICKS_PER_SECOND
             # TODO: deprecate value key. keeping it for now for backwards compatibility
             self._viseme_data["mouthCues"].append(
                 {
                     "value": viseme_id_to_mouth_shapes[evt.viseme_id],
                     "azure_viseme_id": evt.viseme_id,
-                    "start": (evt.audio_offset) / MICROSECONDS_PER_SECOND
+                    "start": (evt.audio_offset) / AUDIO_OFFSET_TICKS_PER_SECOND
                     if len(self._viseme_data["mouthCues"]) > 0
                     else 0.0,
-                    "end": (evt.audio_offset + MICROSECONDS_PER_SECOND) / MICROSECONDS_PER_SECOND,
+                    "end": (evt.audio_offset + AUDIO_OFFSET_TICKS_PER_SECOND) / AUDIO_OFFSET_TICKS_PER_SECOND,
                 }
             )
             self.viseme_stream.put_nowait(json.dumps(self._viseme_data))
@@ -117,10 +117,10 @@ class AzureTTS(Plugin):
                 {
                     "value": viseme_id_to_mouth_shapes[evt.viseme_id],
                     "azure_viseme_id": evt.viseme_id,
-                    "start": (evt.audio_offset) / MICROSECONDS_PER_SECOND
+                    "start": (evt.audio_offset) / AUDIO_OFFSET_TICKS_PER_SECOND
                     if len(self._viseme_data["mouthCues"]) > 0
                     else 0.0,
-                    "end": (evt.audio_offset + MICROSECONDS_PER_SECOND) / MICROSECONDS_PER_SECOND,
+                    "end": (evt.audio_offset + AUDIO_OFFSET_TICKS_PER_SECOND) / AUDIO_OFFSET_TICKS_PER_SECOND,
                 }
             )
             self.viseme_stream.put_nowait(json.dumps(self._viseme_data))

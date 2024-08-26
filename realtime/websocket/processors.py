@@ -20,8 +20,9 @@ class WebsocketInputStream:
         ws (WebSocket): The WebSocket connection.
     """
 
-    def __init__(self, ws: WebSocket):
+    def __init__(self, ws: WebSocket, sample_rate: int = 48000):
         self.ws = ws
+        self.sample_rate = sample_rate
 
     async def run(self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream):
         """
@@ -32,6 +33,8 @@ class WebsocketInputStream:
         """
         self.audio_output_stream = audio_stream
         self.message_stream = message_stream
+
+        # TODO: Implement video stream processing
         self.video_stream = video_stream
 
         audio_data = b""
@@ -56,7 +59,7 @@ class WebsocketInputStream:
                         audio_data = b""
 
                     frame = av.AudioFrame.from_ndarray(array, format="s16", layout="mono")
-                    frame.sample_rate = 8000
+                    frame.sample_rate = self.sample_rate
                     await self.audio_output_stream.put(frame)
             except Exception as e:
                 logging.error("websocket: Exception", e)
@@ -78,7 +81,7 @@ class WebsocketOutputStream:
         self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, byte_stream: ByteStream
     ):
         """
-        Starts tasks to process and send audio and text streams.
+        Starts tasks to process and send byte and text streams.
 
         Args:
             audio_stream (AudioStream): The audio stream to send.
@@ -86,6 +89,7 @@ class WebsocketOutputStream:
             video_stream (VideoStream): The video stream to send.
             byte_stream (ByteStream): The byte stream to send.
         """
+        # TODO: Implement video stream and audio stream processing
         await asyncio.gather(self.task(byte_stream), self.task(message_stream))
 
     async def task(self, input_stream):

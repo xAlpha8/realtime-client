@@ -18,7 +18,7 @@ from realtime.streams import ByteStream, TextStream
 logger = logging.getLogger(__name__)
 
 # https://learn.microsoft.com/en-us/python/api/azure-cognitiveservices-speech/azure.cognitiveservices.speech.speechsynthesisvisemeeventargs?view=azure-python#azure-cognitiveservices-speech-speechsynthesisvisemeeventargs-audio-offset
-AUDIO_OFFSET_TICKS_PER_SECOND = 10000000.0
+AUDIO_OFFSET_TICKS_PER_SECOND = 1e7
 
 # TODO: deprecate dictionary. keeping it for now for backwards compatibility
 viseme_id_to_mouth_shapes = {

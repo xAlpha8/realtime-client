@@ -107,9 +107,12 @@ class WebsocketOutputStream:
             elif isinstance(data, bytes):
                 output_bytes_io = io.BytesIO()
                 in_memory_wav = wave.open(output_bytes_io, "wb")
+
+                # TODO: Get channels, sample width, and sample rate from TTS module instead of hardcoding it
                 in_memory_wav.setnchannels(1)
                 in_memory_wav.setsampwidth(2)
                 in_memory_wav.setframerate(16000)
+
                 in_memory_wav.writeframes(data)
                 output_bytes_io.seek(0)
                 data = output_bytes_io.read()

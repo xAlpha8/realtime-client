@@ -13,6 +13,7 @@ from realtime.streams import AudioStream, TextStream
 
 logging.basicConfig(level=logging.INFO)
 
+
 @realtime.App()
 class ReplayBot:
     """
@@ -23,6 +24,7 @@ class ReplayBot:
         run(ws: WebSocket): Handles the WebSocket connection and processes data.
         teardown(): Cleans up any resources or configurations.
     """
+
     async def setup(self):
         pass
 
@@ -34,7 +36,7 @@ class ReplayBot:
             You will always reply with a JSON object.\
             Each message has a text, facialExpression, and animation property.\
             The text property is a short response to the user (no emoji).\
-            The different facial expressions are: smile, sad, angry, surprised, funnyFace, and default.\
+            The different facial expressions are: smile, sad, angry, and default.\
             The different animations are: Talking_0, Talking_1, Talking_2, Crying, Laughing, Rumba, Idle, Terrified, and Angry.",
             temperature=0.9,
             response_format={"type": "json_object"},
@@ -48,9 +50,7 @@ class ReplayBot:
 
         llm_token_stream, chat_history_stream = await llm_node.run(deepgram_stream)
 
-        json_text_stream = map(
-            await llm_token_stream.clone(), lambda x: json.loads(x).get("text")
-        )
+        json_text_stream = map(await llm_token_stream.clone(), lambda x: json.loads(x).get("text"))
 
         tts_stream, viseme_stream = await tts_node.run(json_text_stream)
 
@@ -60,6 +60,7 @@ class ReplayBot:
 
     async def teardown(self):
         pass
+
 
 if __name__ == "__main__":
     v = ReplayBot()

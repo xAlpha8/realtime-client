@@ -40,7 +40,6 @@ class AudioRTCDriver(MediaStreamTrack):
 
     async def recv(self):
         frame = await self.audio_data_q.get()
-        print("audio frame", frame.samples, frame.sample_rate)
         data_time = frame.samples / frame.sample_rate
         if self._start is None:
             self._start = time.time() + data_time

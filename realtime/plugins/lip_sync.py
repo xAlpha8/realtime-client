@@ -2,15 +2,11 @@ import asyncio
 import json
 import logging
 import os
-import subprocess
 import time
 import wave
 
-import numpy as np
-
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import ByteStream, TextStream
-from elevenlabs import save
 
 logger = logging.getLogger(__name__)
 

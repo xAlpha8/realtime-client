@@ -12,7 +12,7 @@ class TokenAggregator(Plugin):
         self.output_queue = TextStream()
         self.buffer = ""
 
-    async def run(self, input_queue: asyncio.Queue) -> asyncio.Queue:
+    def run(self, input_queue: asyncio.Queue) -> asyncio.Queue:
         self.input_queue = input_queue
         self._task = asyncio.create_task(self._aggregate_tokens())
         return self.output_queue

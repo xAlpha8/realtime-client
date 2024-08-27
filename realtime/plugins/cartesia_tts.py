@@ -5,12 +5,13 @@ import logging
 import os
 import time
 import uuid
+from urllib.parse import urlencode
+
 import websockets
 
+from realtime.data import AudioData
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import ByteStream, TextStream
-from urllib.parse import urlencode
-from realtime.data import AudioData
 
 
 class CartesiaTTS(Plugin):
@@ -41,7 +42,7 @@ class CartesiaTTS(Plugin):
         self.base_url = base_url
         self.cartesia_version = cartesia_version
 
-    async def run(self, input_queue: TextStream) -> ByteStream:
+    def run(self, input_queue: TextStream) -> ByteStream:
         self.input_queue = input_queue
         self._task = asyncio.create_task(self.synthesize_speech())
         return self.output_queue

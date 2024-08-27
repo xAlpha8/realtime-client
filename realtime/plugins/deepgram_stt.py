@@ -64,7 +64,7 @@ class DeepgramSTT(Plugin):
         await self._session.close()
         self._task.cancel()
 
-    async def run(self, input_queue) -> None:
+    def run(self, input_queue) -> None:
         try:
             self.input_queue = input_queue
             self._task = asyncio.create_task(self._run_ws())

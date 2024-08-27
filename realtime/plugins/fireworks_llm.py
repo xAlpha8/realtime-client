@@ -80,7 +80,7 @@ class FireworksLLM(Plugin):
             self.chat_history_queue.put_nowait(json.dumps(self._history[-1]))
             self._generating = False
 
-    async def run(self, input_queue: TextStream) -> Tuple[TextStream, TextStream]:
+    def run(self, input_queue: TextStream) -> Tuple[TextStream, TextStream]:
         self.input_queue = input_queue
         self._task = asyncio.create_task(self._stream_chat_completions())
         return self.output_queue, self.chat_history_queue

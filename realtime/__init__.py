@@ -25,6 +25,15 @@ try:
     from .web_endpoint import web_endpoint  # noqa: F401
     from .websocket import websocket  # noqa: F401
     from .data import AudioData, ImageData, TextData  # noqa: F401
+    from .plugins.cartesia_tts import CartesiaTTS  # noqa: F401
+    from .plugins.deepgram_stt import DeepgramSTT  # noqa: F401
+    from .plugins.groq_llm import GroqLLM  # noqa: F401
+    from .plugins.token_aggregator import TokenAggregator  # noqa: F401
+    from .streams import AudioStream, VideoStream, TextStream  # noqa: F401
+    from .ops.map import map  # noqa: F401
+    from .ops.merge import merge  # noqa: F401
+    from .plugins.azure_tts import AzureTTS  # noqa: F401
+    from .plugins.fireworks_llm import FireworksLLM  # noqa: F401
 except Exception:
     print()
     print("#" * 50)
@@ -33,4 +42,21 @@ except Exception:
     print()
     raise
 
-__all__ = ["function", "streaming_endpoint", "App", "web_endpoint", "websocket", "AudioData", "ImageData", "TextData"]
+__all__ = [
+    "function",
+    "streaming_endpoint",
+    "App",
+    "web_endpoint",
+    "websocket",
+    "AudioData",
+    "ImageData",
+    "TextData",
+    "CartesiaTTS",
+    "DeepgramSTT",
+    "GroqLLM",
+    "TokenAggregator",
+    "map",
+    "merge",
+    "AzureTTS",
+    "FireworksLLM",
+]

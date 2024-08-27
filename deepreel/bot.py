@@ -55,4 +55,5 @@ class DeepReelBot:
 
 
 if __name__ == "__main__":
-    asyncio.run(DeepReelBot().run())
+    bot = DeepReelBot()
+    bot.start()

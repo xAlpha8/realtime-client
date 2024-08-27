@@ -6,16 +6,14 @@ from contextlib import asynccontextmanager
 from typing import Dict
 
 from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaRelay
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from realtime.server import RealtimeServer
 
 ROOT = os.path.dirname(__file__)
 
-logger = logging.getLogger("pc")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 pcs = set()
-# relay = MediaRelay()
 
 
 def offer(audio_driver, video_driver, text_driver):
@@ -87,8 +85,7 @@ async def on_shutdown(app: FastAPI):
 
 
 def create_and_run_server(audio_driver, video_driver, text_driver):
-    webrtc_app = FastAPI(lifespan=on_shutdown)
-    webrtc_app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-    webrtc_app.add_api_route("/offer", offer(audio_driver, video_driver, text_driver), methods=["POST"])
-    webrtc_app.add_api_route("/connections", get_active_connection_ids, methods=["GET"])
-    return webrtc_app
+    fastapi_app = RealtimeServer().get_app()
+    fastapi_app.add_api_route("/offer", offer(audio_driver, video_driver, text_driver), methods=["POST"])
+    fastapi_app.add_api_route("/connections", get_active_connection_ids, methods=["GET"])
+    fastapi_app.add_event_handler("shutdown", on_shutdown)

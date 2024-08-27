@@ -25,8 +25,6 @@ def streaming_endpoint():
                 audio_input_q = None
                 video_input_q = None
                 text_input_q = None
-                instance = None
-                server = None
 
                 signature = inspect.signature(func)
                 parameters = signature.parameters
@@ -40,8 +38,6 @@ def streaming_endpoint():
                     elif param.annotation == TextStream:
                         text_input_q = TextStream()
                         kwargs[name] = text_input_q
-                instance = args[0]
-                await instance.setup()
                 output_streams = await func(*args, **kwargs)
                 # Ensure output_streams is iterable
                 if not isinstance(output_streams, (list, tuple)):
@@ -59,25 +55,7 @@ def streaming_endpoint():
                 video_output_frame_processor = VideoRTCDriver(video_input_q, vq)
                 audio_output_frame_processor = AudioRTCDriver(audio_input_q, aq)
                 text_output_processor = TextRTCDriver(text_input_q, tq)
-                webrtc_app = create_and_run_server(
-                    audio_output_frame_processor, video_output_frame_processor, text_output_processor
-                )
-
-                HOSTNAME = "0.0.0.0"
-                PORT = int(os.getenv("HTTP_PORT", 8080))
-                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-                ssl_context.load_cert_chain(os.environ["SSL_CERT_PATH"], keyfile=os.environ["SSL_KEY_PATH"])
-                server = uvicorn.Server(
-                    config=uvicorn.Config(
-                        webrtc_app,
-                        host=HOSTNAME,
-                        port=PORT,
-                        log_level="info",
-                        ssl_keyfile=os.environ["SSL_KEY_PATH"],
-                        ssl_certfile=os.environ["SSL_CERT_PATH"],
-                    ),
-                )
-                server_task = asyncio.create_task(server.serve())
+                create_and_run_server(audio_output_frame_processor, video_output_frame_processor, text_output_processor)
 
                 tasks = [
                     asyncio.create_task(video_output_frame_processor.run_input()),
@@ -92,16 +70,6 @@ def streaming_endpoint():
                 logging.error("Error in streaming_endpoint: ", e)
             finally:
                 logging.info("Received exit, stopping bot")
-                try:
-                    if instance:
-                        await instance.teardown()
-                except Exception as e:
-                    logging.error("Error in instance.teardown: ", e)
-                try:
-                    if server:
-                        await server.shutdown()
-                except Exception as e:
-                    logging.error("Error in server.shutdown: ", e)
                 loop = asyncio.get_event_loop()
                 tasks = asyncio.all_tasks(loop)
                 for task in tasks:

@@ -15,15 +15,16 @@ class VideoRTCDriver(MediaStreamTrack):
         self._start = None
 
     async def recv(self):
-        data_time = 0.010
+        video_data = await self.video_output_q.get()
+        video_frame = video_data.get_frame()
+        data_time = video_data.get_duration_seconds()
         if self._start is None:
             self._start = time.time() + data_time
         else:
             wait = self._start - time.time() - 0.005
-            self._start = time.time() + data_time
             if wait > 0:
                 await asyncio.sleep(wait)
-        video_frame = await self.video_output_q.get()
+            self._start = time.time() + data_time
         return video_frame
 
     def add_track(self, track):

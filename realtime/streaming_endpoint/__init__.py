@@ -2,11 +2,7 @@ import asyncio
 import functools
 import inspect
 import logging
-import os
-import ssl
-import time
 
-import uvicorn
 
 from realtime.streaming_endpoint.AudioRTCDriver import AudioRTCDriver
 from realtime.streaming_endpoint.server import create_and_run_server
@@ -53,13 +49,15 @@ def streaming_endpoint():
                         tq = s
 
                 video_output_frame_processor = VideoRTCDriver(video_input_q, vq)
+
+                # TODO: get audio_output_layout, audio_output_format, audio_output_sample_rate from SDP
                 audio_output_frame_processor = AudioRTCDriver(audio_input_q, aq)
                 text_output_processor = TextRTCDriver(text_input_q, tq)
                 create_and_run_server(audio_output_frame_processor, video_output_frame_processor, text_output_processor)
 
                 tasks = [
                     asyncio.create_task(video_output_frame_processor.run_input()),
-                    asyncio.create_task(audio_output_frame_processor.run_input()),
+                    asyncio.create_task(audio_output_frame_processor.run()),
                     asyncio.create_task(text_output_processor.run_input()),
                 ]
                 await asyncio.gather(*tasks)

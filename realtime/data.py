@@ -141,6 +141,10 @@ class ImageData:
         image_frame.time_base = fractions.Fraction(1, self.frame_rate)
         return image_frame
 
+    def get_duration_seconds(self) -> float:
+        # Calculate the duration of the video in seconds
+        return 1.0 / self.frame_rate
+
 
 # Define a class to handle text data with various utilities
 class TextData:

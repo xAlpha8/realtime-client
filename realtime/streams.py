@@ -28,7 +28,7 @@ class AudioStream(Stream):
         super().__init__()
         self.sample_rate = sample_rate
 
-    async def clone(self):
+    def clone(self):
         """Create a copy of this queue."""
         clone = AudioStream()
         self._clones.append(clone)
@@ -38,7 +38,7 @@ class AudioStream(Stream):
 class VideoStream(Stream):
     type = "video"
 
-    async def clone(self):
+    def clone(self):
         """Create a copy of this queue."""
         clone = VideoStream()
         self._clones.append(clone)
@@ -48,7 +48,7 @@ class VideoStream(Stream):
 class TextStream(Stream):
     type = "text"
 
-    async def clone(self):
+    def clone(self):
         """Create a copy of this queue."""
         clone = TextStream()
         self._clones.append(clone)
@@ -58,7 +58,7 @@ class TextStream(Stream):
 class ByteStream(Stream):
     type = "bytes"
 
-    async def clone(self):
+    def clone(self):
         """Create a copy of this queue."""
         clone = ByteStream()
         self._clones.append(clone)

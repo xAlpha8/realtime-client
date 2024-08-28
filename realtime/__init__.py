@@ -20,7 +20,6 @@ sentry_sdk.init(
 
 try:
     from .app import App  # noqa: F401
-    from .function import function  # noqa: F401
     from .streaming_endpoint import streaming_endpoint  # noqa: F401
     from .web_endpoint import web_endpoint  # noqa: F401
     from .websocket import websocket  # noqa: F401
@@ -43,7 +42,6 @@ except Exception:
     raise
 
 __all__ = [
-    "function",
     "streaming_endpoint",
     "App",
     "web_endpoint",

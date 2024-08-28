@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Type, Any, Callable
 from realtime.server import RealtimeServer
+from realtime._realtime_function import RealtimeFunction
 
 
 def App() -> Callable[[Type], Callable[..., "RealtimeApp"]]:
@@ -72,12 +73,19 @@ class RealtimeApp:
         except RuntimeError:
             loop = asyncio.new_event_loop()
 
+        rt_functions = RealtimeFunction.get_realtime_functions_from_class(self._user_cls_instance)
+        if len(rt_functions) > 1:
+            raise RuntimeError("More than one realtime function found in the user class.")
         try:
             # Run setup
             loop.run_until_complete(self._user_cls_instance.setup())
 
             # Run main loop and RealtimeServer concurrently
-            loop.run_until_complete(asyncio.gather(RealtimeServer().start(), self._user_cls_instance.run()))
+            if len(rt_functions) == 1:
+                rt_func = list(rt_functions.values())[0]
+                loop.run_until_complete(asyncio.gather(RealtimeServer().start(), rt_func(self._user_cls_instance)))
+            else:
+                loop.run_until_complete(asyncio.gather(RealtimeServer().start()))
 
             # Run teardown
             loop.run_until_complete(self._user_cls_instance.teardown())

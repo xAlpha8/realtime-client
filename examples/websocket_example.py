@@ -1,20 +1,12 @@
-import asyncio
 import json
 import logging
 
-import realtime
-from realtime.ops.map import map
-from realtime.ops.merge import merge
-from realtime.plugins.azure_tts import AzureTTS
-from realtime.plugins.deepgram_stt import DeepgramSTT
-from realtime.plugins.fireworks_llm import FireworksLLM
-from realtime.server import RealtimeServer
-from realtime.streams import AudioStream, TextStream
+import realtime as rt
 
 logging.basicConfig(level=logging.INFO)
 
 
-@realtime.App()
+@rt.App()
 class ReplayBot:
     """
     A bot that uses WebSocket to interact with clients, processing audio and text data.
@@ -28,10 +20,10 @@ class ReplayBot:
     async def setup(self):
         pass
 
-    @realtime.websocket()
-    async def run(audio_input_stream: AudioStream, message_stream: TextStream):
-        deepgram_node = DeepgramSTT(sample_rate=audio_input_stream.sample_rate)
-        llm_node = FireworksLLM(
+    @rt.websocket()
+    async def run(audio_input_stream: rt.AudioStream, message_stream: rt.TextStream):
+        deepgram_node = rt.DeepgramSTT(sample_rate=audio_input_stream.sample_rate)
+        llm_node = rt.GroqLLM(
             system_prompt="You are a virtual girlfriend.\
             You will always reply with a JSON object.\
             Each message has a text, facialExpression, and animation property.\
@@ -41,20 +33,19 @@ class ReplayBot:
             temperature=0.9,
             response_format={"type": "json_object"},
             stream=False,
-            model="accounts/fireworks/models/llama-v3-70b-instruct",
         )
-        tts_node = AzureTTS(stream=False)
+        tts_node = rt.AzureTTS(stream=True)
 
-        deepgram_stream = await deepgram_node.run(audio_input_stream)
-        deepgram_stream = merge([deepgram_stream, message_stream])
+        deepgram_stream = deepgram_node.run(audio_input_stream)
+        deepgram_stream = rt.merge([deepgram_stream, message_stream])
 
-        llm_token_stream, chat_history_stream = await llm_node.run(deepgram_stream)
+        llm_token_stream, chat_history_stream = llm_node.run(deepgram_stream)
 
-        json_text_stream = map(await llm_token_stream.clone(), lambda x: json.loads(x).get("text"))
+        json_text_stream = rt.map(llm_token_stream.clone(), lambda x: json.loads(x).get("text"))
 
-        tts_stream, viseme_stream = await tts_node.run(json_text_stream)
+        tts_stream, viseme_stream = tts_node.run(json_text_stream)
 
-        llm_with_viseme_stream = merge([llm_token_stream, viseme_stream])
+        llm_with_viseme_stream = rt.merge([llm_token_stream, viseme_stream])
 
         return tts_stream, llm_with_viseme_stream
 
@@ -64,4 +55,4 @@ class ReplayBot:
 
 if __name__ == "__main__":
     v = ReplayBot()
-    asyncio.run(RealtimeServer().start())
+    v.start()

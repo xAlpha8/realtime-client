@@ -23,12 +23,13 @@ class TokenAggregator(Plugin):
             if not token:
                 continue
             self.buffer += token
+            i = -1
             for ending in SENTENCE_ENDINGS:
-                i = self.buffer.rfind(ending)
-                if i != -1 and len(self.buffer[: i + 1]) >= 10:
-                    await self.output_queue.put(self.buffer[: i + 1])
-                    self.buffer = self.buffer[i + 1 :]
-                    break
+                i = max(i, self.buffer.rfind(ending))
+            if i != -1 and len(self.buffer[: i + 1]) >= 10:
+                await self.output_queue.put(self.buffer[: i + 1])
+                self.buffer = self.buffer[i + 1 :]
+                break
 
     async def close(self):
         self._task.cancel()

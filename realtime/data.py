@@ -115,31 +115,26 @@ class ImageData:
         self.format = format
         self.relative_start_time = relative_start_time or 0.0
 
-    def get_bytes(self) -> bytes:
-        # Convert video data to bytes
-        if isinstance(self.data, bytes):
-            return self.data
-        elif isinstance(self.data, np.ndarray):
-            return self.data.tobytes()
-        elif isinstance(self.data, Image.Image):
-            return self.data.tobytes()
-        elif isinstance(self.data, VideoFrame):
-            return self.data.to_ndarray().tobytes()
-        else:
-            raise ValueError("VideoData data must be bytes or np.ndarray")
-
     def get_pts(self) -> int:
         # Get the pts of the video frame
         return int(self.relative_start_time * self.frame_rate)
 
     def get_frame(self) -> VideoFrame:
         # Convert video bytes to a VideoFrame
-        image_bytes = self.get_bytes()
-        pil_image = Image.open(io.BytesIO(image_bytes))
-        image_frame = VideoFrame.from_image(pil_image)
-        image_frame.pts = self.get_pts()
-        image_frame.time_base = fractions.Fraction(1, self.frame_rate)
-        return image_frame
+        if isinstance(self.data, bytes):
+            pil_image = Image.open(io.BytesIO(self.data), formats=[self.format])
+            image_frame = VideoFrame.from_image(pil_image)
+            image_frame.pts = self.get_pts()
+            image_frame.time_base = fractions.Fraction(1, self.frame_rate)
+            return image_frame
+        elif isinstance(self.data, np.ndarray):
+            return Image.fromarray(self.data)
+        elif isinstance(self.data, Image.Image):
+            return VideoFrame.from_image(self.data)
+        elif isinstance(self.data, VideoFrame):
+            return self.data
+        else:
+            raise ValueError("VideoData data must be bytes or np.ndarray")
 
     def get_duration_seconds(self) -> float:
         # Calculate the duration of the video in seconds

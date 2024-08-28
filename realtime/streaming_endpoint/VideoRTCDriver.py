@@ -2,6 +2,7 @@ import asyncio
 import time
 from av import VideoFrame
 from aiortc import MediaStreamTrack
+from realtime.data import ImageData
 
 
 class VideoRTCDriver(MediaStreamTrack):
@@ -42,7 +43,7 @@ class VideoRTCDriver(MediaStreamTrack):
                 await asyncio.sleep(0.2)
             while True:
                 frame = await self._track.recv()
-                await self.video_input_q.put(frame)
+                await self.video_input_q.put(ImageData(frame))
         except Exception as e:
             print("Error in video_frame_callback: ", e)
             raise asyncio.CancelledError

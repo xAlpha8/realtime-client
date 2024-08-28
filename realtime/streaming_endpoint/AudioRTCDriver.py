@@ -58,7 +58,7 @@ class AudioRTCDriver(MediaStreamTrack):
                 await asyncio.sleep(0.2)
             while True:
                 frame = await self._track.recv()
-                await self.audio_input_q.put(frame)
+                await self.audio_input_q.put(AudioData(frame))
         except Exception as e:
             logging.error("Error in audio_frame_callback: ", e)
             raise asyncio.CancelledError

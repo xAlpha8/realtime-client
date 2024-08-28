@@ -6,7 +6,6 @@ import websockets
 
 from realtime.data import AudioData, ImageData
 from realtime.streams import AudioStream, VideoStream
-from realtime.utils.clock import Clock
 
 
 class DeepreelPlugin:
@@ -14,7 +13,7 @@ class DeepreelPlugin:
         self.websocket_url = websocket_url
         self.audio_samples = 0
 
-    async def run(self, audio_input_stream: AudioStream):
+    def run(self, audio_input_stream: AudioStream):
         self.audio_input_stream = audio_input_stream
         self.image_output_stream = VideoStream()
         self.audio_output_stream = AudioStream()
@@ -41,7 +40,7 @@ class DeepreelPlugin:
                 self._audio_library[audio_json["start_seconds"]] = audio_data
 
         async def recv_task():
-            start_time = Clock.get_playback_time()
+            start_time = 0.0
             while True:
                 msg = await self._ws.recv()
 
@@ -60,6 +59,7 @@ class DeepreelPlugin:
 
                     if image["start_seconds"] in self._audio_library:
                         audio_data: AudioData = self._audio_library.pop(image["start_seconds"])
+                        audio_data.relative_start_time = start_time
                         self.audio_output_stream.put_nowait(audio_data)
 
                     start_time += image["duration"]

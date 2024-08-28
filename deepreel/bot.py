@@ -1,4 +1,3 @@
-import asyncio
 import json
 import logging
 from typing import Tuple
@@ -7,46 +6,35 @@ logging.basicConfig(level=logging.INFO)
 
 from deepreel_plugin import DeepreelPlugin
 
-import realtime
-from realtime.ops.map import map
-from realtime.ops.merge import merge
-from realtime.plugins.azure_tts import AzureTTS
-from realtime.plugins.deepgram_stt import DeepgramSTT
-from realtime.plugins.fireworks_llm import FireworksLLM
-from realtime.streams import AudioStream, Stream, TextStream
+import realtime as rt
 
 
-@realtime.App()
+@rt.App()
 class DeepReelBot:
     async def setup(self):
         pass
 
-    @realtime.streaming_endpoint()
-    async def run(self, audio_input_stream: AudioStream, message_stream: TextStream) -> Tuple[Stream, ...]:
-        deepgram_node = DeepgramSTT(sample_rate=audio_input_stream.sample_rate)
-        llm_node = FireworksLLM(
-            system_prompt="You are a virtual assistant.\
-            You will always reply with a JSON object.\
-            Each message has a text, facialExpression, and animation property.\
-            The text property is a short response to the user (no emoji).\
-            The different facial expressions are: smile, sad, angry, surprised, funnyFace, and default.\
-            The different animations are: Talking_0, Talking_1, Talking_2, Crying, Laughing, Rumba, Idle, Terrified, and Angry.",
+    @rt.streaming_endpoint()
+    async def run(self, audio_input_stream: rt.AudioStream, message_stream: rt.TextStream):
+        deepgram_node = rt.DeepgramSTT(sample_rate=audio_input_stream.sample_rate)
+        llm_node = rt.GroqLLM(
+            system_prompt="You are a virtual assistant. Keep the response short and concise.",
             temperature=0.9,
-            response_format={"type": "json_object"},
             stream=False,
         )
-        tts_node = AzureTTS(stream=False, voice_id="en-US-EricNeural")
+        token_aggregator_node = rt.TokenAggregator()
+        tts_node = rt.CartesiaTTS()
         deepreel_node = DeepreelPlugin(websocket_url="ws://localhost:8765/ws")
 
-        deepgram_stream = await deepgram_node.run(audio_input_stream)
-        deepgram_stream = merge([deepgram_stream, message_stream])
+        deepgram_stream = deepgram_node.run(audio_input_stream)
+        message_stream = rt.map(message_stream, lambda x: json.loads(x).get("content"))
+        deepgram_stream = rt.merge([deepgram_stream, message_stream])
 
-        llm_token_stream, chat_history_stream = await llm_node.run(deepgram_stream)
+        llm_token_stream, chat_history_stream = llm_node.run(deepgram_stream)
+        token_aggregator_stream = token_aggregator_node.run(llm_token_stream)
 
-        json_text_stream = map(await llm_token_stream.clone(), lambda x: json.loads(x).get("text"))
-
-        tts_stream, _ = await tts_node.run(json_text_stream)
-        video_stream, audio_stream = await deepreel_node.run(tts_stream)
+        tts_stream = tts_node.run(token_aggregator_stream)
+        video_stream, audio_stream = deepreel_node.run(tts_stream)
 
         return video_stream, audio_stream
 

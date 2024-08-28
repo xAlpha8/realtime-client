@@ -4,12 +4,14 @@ import asyncio
 import json
 import logging
 import os
+import time
 from urllib.parse import urlencode
 
 import aiohttp
 
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import TextStream
+from realtime.utils import tracing
 
 _KEEPALIVE_MSG: str = json.dumps({"type": "KeepAlive"})
 _CLOSE_MSG: str = json.dumps({"type": "CloseStream"})
@@ -31,6 +33,7 @@ class DeepgramSTT(Plugin):
         api_key: str | None = None,
         sample_rate: int = 16000,
         num_channels: int = 1,
+        sample_width: int = 2,
         min_silence_duration: int = 100,
         confidence_threshold=0.8,
     ) -> None:
@@ -49,6 +52,7 @@ class DeepgramSTT(Plugin):
 
         self._sample_rate = sample_rate
         self._num_channels = num_channels
+        self._sample_width = sample_width
         self._speaking = False
         self.confidence_threshold = confidence_threshold
 
@@ -56,6 +60,7 @@ class DeepgramSTT(Plugin):
 
         self._closed = False
         self.output_queue = TextStream()
+        self._audio_duration_received = 0.0
 
     async def close(self):
         self.input_queue.put_nowait(_CLOSE_MSG)
@@ -111,6 +116,9 @@ class DeepgramSTT(Plugin):
                     break
 
                 bytes = data.to_ndarray().tobytes()
+                self._audio_duration_received += len(bytes) / (
+                    self._sample_rate * self._num_channels * self._sample_width
+                )
                 await ws.send_bytes(bytes)
 
         async def recv_task():
@@ -137,8 +145,13 @@ class DeepgramSTT(Plugin):
                     is_final = data["is_final"]
                     top_choice = data["channel"]["alternatives"][0]
                     confidence = top_choice["confidence"]
+                    audio_processed_duration = data["duration"] + data["start"]
+
                     if top_choice["transcript"] and confidence > self.confidence_threshold and is_final:
                         logger.info("deepgram transcript: %s", top_choice["transcript"])
+                        latency = self._audio_duration_received - audio_processed_duration
+                        tracing.register_event(tracing.Event.USER_SPEECH_END, time.time() - latency)
+                        tracing.register_event(tracing.Event.TRANSCRIPTION_RECEIVED)
                         await self.output_queue.put(top_choice["transcript"])
                 except Exception as e:
                     logger.error("failed to process deepgram message %s", e)

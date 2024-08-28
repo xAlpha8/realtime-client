@@ -12,6 +12,7 @@ import websockets
 from realtime.data import AudioData
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import ByteStream, TextStream
+from realtime.utils import tracing
 
 
 class CartesiaTTS(Plugin):
@@ -64,7 +65,7 @@ class CartesiaTTS(Plugin):
                     text_chunk = await self.input_queue.get()
                     if text_chunk is None or text_chunk == "":
                         continue
-                    start_time = time.time()
+                    tracing.register_event(tracing.Event.TTS_START)
                     logging.info("Generating TTS %s", text_chunk)
                     payload = {
                         "voice": {"mode": "id", "id": self.voice_id},
@@ -76,11 +77,10 @@ class CartesiaTTS(Plugin):
                         "transcript": text_chunk,
                         "model_id": self.model,
                         "context_id": str(uuid.uuid4()),
-                        "continue": True,
+                        "continue": False,
                     }
                     self._generating = True
                     await self._ws.send(json.dumps(payload))
-                    logging.info("Cartesia TTS TTFB: %s", time.time() - start_time)
             except Exception as e:
                 logging.error("Error sending text to Cartesia TTS: %s", e)
                 await self.output_queue.put(None)
@@ -89,11 +89,17 @@ class CartesiaTTS(Plugin):
 
         async def receive_audio():
             try:
+                total_audio_bytes = 0
+                is_first_chunk = True
                 while True:
                     response = await self._ws.recv()
                     response = json.loads(response)
                     if response["type"] == "chunk":
                         audio_bytes = base64.b64decode(response["data"])
+                        total_audio_bytes += len(audio_bytes)
+                        if is_first_chunk:
+                            tracing.register_event(tracing.Event.TTS_TTFB)
+                            is_first_chunk = False
                         await self.output_queue.put(
                             AudioData(
                                 audio_bytes,
@@ -101,8 +107,13 @@ class CartesiaTTS(Plugin):
                             )
                         )
                     if response["done"]:
+                        tracing.register_event(tracing.Event.TTS_END)
+                        tracing.register_metric(tracing.Metric.TTS_TOTAL_BYTES, total_audio_bytes)
+                        total_audio_bytes = 0
                         await self.output_queue.put(None)
                         self._generating = False
+                        is_first_chunk = True
+                        tracing.log_timeline()
             except Exception as e:
                 logging.error("Error receiving audio from Cartesia TTS: %s", e)
                 await self.output_queue.put(None)

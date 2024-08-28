@@ -9,6 +9,7 @@ from realtime.streaming_endpoint.server import create_and_run_server
 from realtime.streaming_endpoint.TextRTCDriver import TextRTCDriver
 from realtime.streaming_endpoint.VideoRTCDriver import VideoRTCDriver
 from realtime.streams import AudioStream, TextStream, VideoStream
+from realtime.utils import tracing
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ def streaming_endpoint() -> Callable:
                         text_input_q = TextStream()
                         kwargs[name] = text_input_q
 
+                tracing.start()
                 # Call the wrapped function and get output streams
                 output_streams = await func(*args, **kwargs)
                 # Ensure output_streams is iterable
@@ -85,6 +87,7 @@ def streaming_endpoint() -> Callable:
             except Exception as e:
                 logging.error("Error in streaming_endpoint: ", e)
             finally:
+                tracing.end()
                 logging.info("Received exit, stopping bot")
                 # Clean up tasks
                 loop = asyncio.get_event_loop()

@@ -9,6 +9,7 @@ from openai import AsyncOpenAI
 from realtime.plugins.base_plugin import Plugin
 
 from realtime.streams import AudioStream, VideoStream, Stream, TextStream, ByteStream
+from realtime.utils import tracing
 
 
 class GroqLLM(Plugin):
@@ -46,9 +47,9 @@ class GroqLLM(Plugin):
             if text_chunk is None:
                 continue
             self._generating = True
+            tracing.register_event(tracing.Event.LLM_START)
             self._history.append({"role": "user", "content": text_chunk})
             self.chat_history_queue.put_nowait(json.dumps(self._history[-1]))
-            start_time = time.time()
             if self._response_format:
                 chunk_stream = await self._client.chat.completions.create(
                     model=self._model,
@@ -64,24 +65,29 @@ class GroqLLM(Plugin):
                     messages=self._history,
                     temperature=self._temperature,
                 )
-            print(f"=== OpenAI LLM TTFB: {time.time() - start_time}")
             self._history.append({"role": "assistant", "content": ""})
+            first_chunk = True
             if self._stream:
                 async for chunk in chunk_stream:
+                    if first_chunk:
+                        tracing.register_event(tracing.Event.LLM_TTFB)
+                        first_chunk = False
                     if len(chunk.choices) == 0:
                         continue
-
                     elif chunk.choices[0].delta.content:
                         self._history[-1]["content"] += chunk.choices[0].delta.content
                         await self.output_queue.put(chunk.choices[0].delta.content)
             else:
                 self._history[-1]["content"] = chunk_stream.choices[0].message.content
                 await self.output_queue.put(chunk_stream.choices[0].message.content)
+                tracing.register_event(tracing.Event.LLM_TTFB)
+            tracing.register_event(tracing.Event.LLM_END)
+            tracing.register_metric(tracing.Metric.LLM_TOTAL_BYTES, len(self._history[-1]["content"]))
             print("llm", self._history[-1]["content"])
             self.chat_history_queue.put_nowait(json.dumps(self._history[-1]))
             self._generating = False
 
-    async def run(self, input_queue: TextStream) -> Tuple[TextStream, TextStream]:
+    def run(self, input_queue: TextStream) -> Tuple[TextStream, TextStream]:
         self.input_queue = input_queue
         self._task = asyncio.create_task(self._stream_chat_completions())
         return self.output_queue, self.chat_history_queue

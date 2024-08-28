@@ -8,12 +8,14 @@ faulthandler.enable()
 import asyncio
 import logging
 import os
-import time
 
 import azure.cognitiveservices.speech as speechsdk
 
+from realtime.data import AudioData
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import ByteStream, TextStream
+from realtime.utils import tracing
+from realtime.utils.clock import Clock
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +85,11 @@ class AzureTTS(Plugin):
         self._speech_config.set_speech_synthesis_output_format(
             speechsdk.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm
         )
+        # TODO: Remove hardcoded sample rate, channels, and sample width
+        self.sample_rate = 16000
+        self.channels = 1
+        self.sample_width = 2
+
         self._speech_config.speech_synthesis_voice_name = voice_id
         try:
             self._speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=self._speech_config, audio_config=None)
@@ -122,7 +129,7 @@ class AzureTTS(Plugin):
             )
             self.viseme_stream.put_nowait(json.dumps(self._viseme_data))
 
-    async def run(self, input_queue: TextStream) -> ByteStream:
+    def run(self, input_queue: TextStream) -> ByteStream:
         self.input_queue = input_queue
         self._task = asyncio.create_task(self.synthesize_speech())
         return self.output_queue, self.viseme_stream
@@ -133,10 +140,11 @@ class AzureTTS(Plugin):
             if text_chunk is None or text_chunk == "":
                 continue
             self._generating = True
-            start_time = time.time()
+            tracing.register_event(tracing.Event.TTS_START)
             logger.info("Generating TTS %s", text_chunk)
 
             if self._stream:
+                total_audio_bytes = 0
                 result = await asyncio.get_event_loop().run_in_executor(
                     self.thread_pool_executor,
                     lambda: self._speech_synthesizer.start_speaking_text_async(text_chunk).get(),
@@ -147,22 +155,44 @@ class AzureTTS(Plugin):
                     self.thread_pool_executor,
                     lambda: audio_data_stream.read_data(audio_buffer),
                 )
-                logger.info("Azure TTS TTFB: %s", time.time() - start_time)
+                tracing.register_event(tracing.Event.TTS_TTFB)
+                audio_start_time = Clock.get_playback_time()
                 while filled_size > 0:
-                    await self.output_queue.put(audio_buffer)
+                    total_audio_bytes += filled_size
+                    audio_data = AudioData(
+                        audio_buffer,
+                        sample_rate=self.sample_rate,
+                        channels=self.channels,
+                        sample_width=self.sample_width,
+                        relative_start_time=audio_start_time,
+                    )
+                    audio_start_time += audio_data.get_duration_seconds()
+                    await self.output_queue.put(audio_data)
                     audio_buffer = bytes(4000)
                     filled_size = await asyncio.get_event_loop().run_in_executor(
                         self.thread_pool_executor,
                         lambda: audio_data_stream.read_data(audio_buffer),
                     )
+                tracing.register_metric(tracing.Metric.TTS_TOTAL_BYTES, total_audio_bytes)
             else:
                 result = await asyncio.get_event_loop().run_in_executor(
                     self.thread_pool_executor,
                     lambda: self._speech_synthesizer.speak_text_async(text_chunk).get(),
                 )
                 audio_data = result.audio_data
-                logger.info("Azure TTS TTFB: %s", time.time() - start_time)
+                tracing.register_metric(tracing.Metric.TTS_TOTAL_BYTES, len(audio_data))
+                tracing.register_event(tracing.Event.TTS_TTFB)
+                audio_data = AudioData(
+                    audio_data,
+                    sample_rate=self.sample_rate,
+                    channels=self.channels,
+                    sample_width=self.sample_width,
+                    relative_start_time=Clock.get_playback_time(),
+                )
                 await self.output_queue.put(audio_data)
+
+            tracing.register_event(tracing.Event.TTS_END)
+            tracing.log_timeline()
             await self.output_queue.put(None)
             self._viseme_data = {"mouthCues": []}
 

@@ -15,7 +15,6 @@ from realtime.data import AudioData
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import ByteStream, TextStream
 from realtime.utils import tracing
-from realtime.utils.clock import Clock
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +155,6 @@ class AzureTTS(Plugin):
                     lambda: audio_data_stream.read_data(audio_buffer),
                 )
                 tracing.register_event(tracing.Event.TTS_TTFB)
-                audio_start_time = Clock.get_playback_time()
                 while filled_size > 0:
                     total_audio_bytes += filled_size
                     audio_data = AudioData(
@@ -164,9 +162,7 @@ class AzureTTS(Plugin):
                         sample_rate=self.sample_rate,
                         channels=self.channels,
                         sample_width=self.sample_width,
-                        relative_start_time=audio_start_time,
                     )
-                    audio_start_time += audio_data.get_duration_seconds()
                     await self.output_queue.put(audio_data)
                     audio_buffer = bytes(4000)
                     filled_size = await asyncio.get_event_loop().run_in_executor(
@@ -187,7 +183,6 @@ class AzureTTS(Plugin):
                     sample_rate=self.sample_rate,
                     channels=self.channels,
                     sample_width=self.sample_width,
-                    relative_start_time=Clock.get_playback_time(),
                 )
                 await self.output_queue.put(audio_data)
 

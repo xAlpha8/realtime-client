@@ -7,6 +7,7 @@ from typing import Union, Optional
 import numpy as np
 from av import AudioFrame, VideoFrame
 from PIL import Image
+from realtime.utils.clock import Clock
 
 
 # Define a class to handle audio data with various utilities
@@ -28,7 +29,7 @@ class AudioData:
         self.channels = channels
         self.sample_width = sample_width
         self.format = format
-        self.relative_start_time = relative_start_time or 0.0
+        self.relative_start_time = relative_start_time or Clock.get_playback_time()
 
     def get_bytes(self) -> bytes:
         # Convert audio data to bytes
@@ -113,7 +114,7 @@ class ImageData:
         self.height = height
         self.frame_rate = frame_rate
         self.format = format
-        self.relative_start_time = relative_start_time or 0.0
+        self.relative_start_time = relative_start_time or Clock.get_playback_time()
 
     def get_pts(self) -> int:
         # Get the pts of the video frame

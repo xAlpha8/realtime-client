@@ -75,7 +75,7 @@ async def get_active_connection_ids():
 
 
 @asynccontextmanager
-async def on_shutdown(app: FastAPI):
+async def on_shutdown():
     yield
     # close peer connections
     logger.info("Closing peer connections")

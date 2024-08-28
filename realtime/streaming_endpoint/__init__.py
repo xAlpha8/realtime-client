@@ -10,6 +10,7 @@ from realtime.streaming_endpoint.TextRTCDriver import TextRTCDriver
 from realtime.streaming_endpoint.VideoRTCDriver import VideoRTCDriver
 from realtime.streams import AudioStream, TextStream, VideoStream
 from realtime.utils import tracing
+from realtime._realtime_function import RealtimeFunction
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,7 @@ def streaming_endpoint() -> Callable:
                     except asyncio.CancelledError:
                         logging.info("Task was cancelled")
 
-        return wrapper
+        rt_func = RealtimeFunction(wrapper)
+        return rt_func
 
     return decorator

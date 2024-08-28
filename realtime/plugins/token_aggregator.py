@@ -29,7 +29,6 @@ class TokenAggregator(Plugin):
             if i != -1 and len(self.buffer[: i + 1]) >= 10:
                 await self.output_queue.put(self.buffer[: i + 1])
                 self.buffer = self.buffer[i + 1 :]
-                break
 
     async def close(self):
         self._task.cancel()

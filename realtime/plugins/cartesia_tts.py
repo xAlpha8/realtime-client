@@ -125,7 +125,6 @@ class CartesiaTTS(Plugin):
         except asyncio.CancelledError:
             logging.info("TTS cancelled")
             self._generating = False
-            self._task.cancel()
 
     async def close(self):
         await self.session.close()

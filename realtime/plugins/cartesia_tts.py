@@ -3,8 +3,8 @@ import base64
 import json
 import logging
 import os
-import time
 import uuid
+from typing import Optional
 from urllib.parse import urlencode
 
 import websockets
@@ -16,9 +16,16 @@ from realtime.utils import tracing
 
 
 class CartesiaTTS(Plugin):
+    """
+    A plugin for text-to-speech synthesis using the Cartesia API.
+
+    This class handles the connection to the Cartesia TTS service, sends text for synthesis,
+    and receives the generated audio data.
+    """
+
     def __init__(
         self,
-        api_key: str | None = None,
+        api_key: Optional[str] = None,
         voice_id: str = "a0e99841-438c-4a64-b679-ae501e7d6091",
         model: str = "sonic-english",
         output_encoding: str = "pcm_s16le",
@@ -27,28 +34,64 @@ class CartesiaTTS(Plugin):
         base_url: str = "wss://api.cartesia.ai/tts/websocket",
         cartesia_version: str = "2024-06-10",
     ):
+        """
+        Initialize the CartesiaTTS plugin.
+
+        Args:
+            api_key (Optional[str]): The API key for Cartesia. If not provided, it will be read from the CARTESIA_API_KEY environment variable.
+            voice_id (str): The ID of the voice to use for synthesis.
+            model (str): The model to use for synthesis.
+            output_encoding (str): The encoding of the output audio.
+            output_sample_rate (int): The sample rate of the output audio.
+            stream (bool): Whether to stream the audio output.
+            base_url (str): The base URL for the Cartesia API.
+            cartesia_version (str): The version of the Cartesia API to use.
+        """
         super().__init__()
 
-        self._generating = False
+        self._generating: bool = False
+        self._task: Optional[asyncio.Task] = None
+        self._ws: Optional[websockets.WebSocketClientProtocol] = None
+        self._interrupt_task: Optional[asyncio.Task] = None
 
-        self.api_key = api_key or os.environ.get("CARTESIA_API_KEY")
+        # Set up API key
+        self.api_key: str = api_key or os.environ.get("CARTESIA_API_KEY")
         if self.api_key is None:
             raise ValueError("Cartesia API key is required")
-        self.voice_id = voice_id
-        self.model = model
-        self.output_encoding = output_encoding
-        self.output_sample_rate = output_sample_rate
-        self.output_queue = ByteStream()
-        self.stream = stream
-        self.base_url = base_url
-        self.cartesia_version = cartesia_version
+
+        # Set up TTS parameters
+        self.voice_id: str = voice_id
+        self.model: str = model
+        self.output_encoding: str = output_encoding
+        self.output_sample_rate: int = output_sample_rate
+        self.output_queue: ByteStream = ByteStream()
+        self.stream: bool = stream
+        self.base_url: str = base_url
+        self.cartesia_version: str = cartesia_version
+
+        # Initialize queues
+        self.input_queue: Optional[TextStream] = None
+        self.interrupt_queue: Optional[asyncio.Queue] = None
 
     def run(self, input_queue: TextStream) -> ByteStream:
+        """
+        Start the TTS synthesis process.
+
+        Args:
+            input_queue (TextStream): The input queue containing text to synthesize.
+
+        Returns:
+            ByteStream: The output queue containing synthesized audio data.
+        """
         self.input_queue = input_queue
         self._task = asyncio.create_task(self.synthesize_speech())
         return self.output_queue
 
     async def synthesize_speech(self):
+        """
+        Main method for speech synthesis. Connects to the Cartesia API and manages
+        the send_text and receive_audio coroutines.
+        """
         query_params = {
             "cartesia_version": self.cartesia_version,
             "api_key": self.api_key,
@@ -60,6 +103,7 @@ class CartesiaTTS(Plugin):
             raise asyncio.CancelledError()
 
         async def send_text():
+            """Send text chunks to the Cartesia API for synthesis."""
             try:
                 while True:
                     text_chunk = await self.input_queue.get()
@@ -88,6 +132,7 @@ class CartesiaTTS(Plugin):
                 raise asyncio.CancelledError()
 
         async def receive_audio():
+            """Receive synthesized audio from the Cartesia API and put it in the output queue."""
             try:
                 total_audio_bytes = 0
                 is_first_chunk = True
@@ -127,14 +172,22 @@ class CartesiaTTS(Plugin):
             self._generating = False
 
     async def close(self):
-        await self.session.close()
-        self._task.cancel()
+        """Close the websocket connection and cancel the main task."""
+        if self._ws:
+            await self._ws.close()
+        if self._task:
+            self._task.cancel()
 
     async def _interrupt(self):
+        """
+        Handle interruptions (e.g., when the user starts speaking).
+        Cancels ongoing TTS generation and clears the output queue.
+        """
         while True:
             user_speaking = await self.interrupt_queue.get()
             if self._generating and user_speaking:
-                self._task.cancel()
+                if self._task:
+                    self._task.cancel()
                 while not self.output_queue.empty():
                     self.output_queue.get_nowait()
                 logging.info("Done cancelling TTS")
@@ -142,5 +195,11 @@ class CartesiaTTS(Plugin):
                 self._task = asyncio.create_task(self.synthesize_speech())
 
     async def set_interrupt(self, interrupt_queue: asyncio.Queue):
+        """
+        Set up the interrupt queue and start the interrupt handling task.
+
+        Args:
+            interrupt_queue (asyncio.Queue): The queue for receiving interrupt signals.
+        """
         self.interrupt_queue = interrupt_queue
         self._interrupt_task = asyncio.create_task(self._interrupt())

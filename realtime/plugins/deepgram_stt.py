@@ -12,6 +12,7 @@ import aiohttp
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import TextStream
 from realtime.utils import tracing
+from realtime.data import AudioData
 
 _KEEPALIVE_MSG: str = json.dumps({"type": "KeepAlive"})
 _CLOSE_MSG: str = json.dumps({"type": "CloseStream"})
@@ -108,14 +109,14 @@ class DeepgramSTT(Plugin):
 
         async def send_task():
             while True:
-                data = await self.input_queue.get()
+                data: AudioData = await self.input_queue.get()
 
                 if data == _CLOSE_MSG:
                     self._closed = True
                     await ws.send_str(data)
                     break
 
-                bytes = data.to_ndarray().tobytes()
+                bytes = data.get_bytes()
                 self._audio_duration_received += len(bytes) / (
                     self._sample_rate * self._num_channels * self._sample_width
                 )

@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from typing import Optional
 
 
 class RealtimeServer:
@@ -37,7 +38,7 @@ class RealtimeServer:
         self.app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
         self.HOSTNAME: str = "0.0.0.0"
         self.PORT: int = int(os.getenv("HTTP_PORT", 8080))
-        self.server: uvicorn.Server | None = None
+        self.server: Optional[uvicorn.Server] = None
 
     async def start(self) -> None:
         """

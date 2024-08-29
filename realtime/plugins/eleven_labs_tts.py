@@ -4,6 +4,7 @@ import os
 import time
 
 import aiohttp
+from typing import Optional
 
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import ByteStream, TextStream
@@ -15,7 +16,7 @@ class ElevenLabsTTS(Plugin):
     def __init__(
         self,
         *,
-        api_key: str | None = None,
+        api_key: Optional[str] = None,
         voice_id: str = "pNInz6obpgDQGcFmaJgB",
         model: str = "eleven_turbo_v2",
         output_format: str = "pcm_16000",

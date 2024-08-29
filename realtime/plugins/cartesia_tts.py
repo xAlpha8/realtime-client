@@ -68,6 +68,7 @@ class CartesiaTTS(Plugin):
         self.stream: bool = stream
         self.base_url: str = base_url
         self.cartesia_version: str = cartesia_version
+        self._current_context_id: str = str(uuid.uuid4())
 
         # Initialize queues
         self.input_queue: Optional[TextStream] = None
@@ -108,6 +109,14 @@ class CartesiaTTS(Plugin):
                 while True:
                     text_chunk = await self.input_queue.get()
                     if text_chunk is None or text_chunk == "":
+                        payload = {
+                            "transcript": "",
+                            "context_id": self._current_context_id,
+                            "continue": False,
+                        }
+                        await self._ws.send(json.dumps(payload))
+
+                        self._current_context_id = str(uuid.uuid4())
                         continue
                     tracing.register_event(tracing.Event.TTS_START)
                     logging.info("Generating TTS %s", text_chunk)
@@ -120,8 +129,8 @@ class CartesiaTTS(Plugin):
                         },
                         "transcript": text_chunk,
                         "model_id": self.model,
-                        "context_id": str(uuid.uuid4()),
-                        "continue": False,
+                        "context_id": self._current_context_id,
+                        "continue": True,
                     }
                     self._generating = True
                     await self._ws.send(json.dumps(payload))
@@ -151,7 +160,7 @@ class CartesiaTTS(Plugin):
                                 sample_rate=self.output_sample_rate,
                             )
                         )
-                    if response["done"]:
+                    elif response["done"]:
                         tracing.register_event(tracing.Event.TTS_END)
                         tracing.register_metric(tracing.Metric.TTS_TOTAL_BYTES, total_audio_bytes)
                         total_audio_bytes = 0

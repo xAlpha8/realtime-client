@@ -4,13 +4,14 @@ import inspect
 import logging
 from typing import Callable, List, Optional, Tuple, Union
 
+from realtime._realtime_function import RealtimeFunction
+from realtime.server import RealtimeServer
 from realtime.streaming_endpoint.AudioRTCDriver import AudioRTCDriver
 from realtime.streaming_endpoint.server import create_and_run_server
 from realtime.streaming_endpoint.TextRTCDriver import TextRTCDriver
 from realtime.streaming_endpoint.VideoRTCDriver import VideoRTCDriver
 from realtime.streams import AudioStream, TextStream, VideoStream
 from realtime.utils import tracing
-from realtime._realtime_function import RealtimeFunction
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +89,7 @@ def streaming_endpoint() -> Callable:
             except Exception as e:
                 logging.error("Error in streaming_endpoint: ", e)
             finally:
+                RealtimeServer().remove_connection()
                 tracing.end()
                 logging.info("Received exit, stopping bot")
                 # Clean up tasks

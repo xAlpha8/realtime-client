@@ -44,7 +44,7 @@ class RealtimeServer:
         """
         Start the server with SSL configuration.
         """
-        # self.app.add_api_route("/connections", self.get_connections, methods=["GET"])
+        self.app.add_api_route("/connections", self.get_connections, methods=["GET"])
         if (
             os.environ.get("SSL_CERT_PATH")
             and os.environ.get("SSL_KEY_PATH")

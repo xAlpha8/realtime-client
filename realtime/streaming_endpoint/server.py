@@ -23,6 +23,7 @@ def offer(audio_driver, video_driver, text_driver):
         pc = RTCPeerConnection()
         pc_id = "PeerConnection(%s)" % uuid.uuid4()
         pcs.add(pc)
+        RealtimeServer().add_connection()
 
         def log_info(msg, *args):
             logger.info(pc_id + " " + msg, *args)
@@ -87,5 +88,4 @@ async def on_shutdown():
 def create_and_run_server(audio_driver, video_driver, text_driver):
     fastapi_app = RealtimeServer().get_app()
     fastapi_app.add_api_route("/offer", offer(audio_driver, video_driver, text_driver), methods=["POST"])
-    fastapi_app.add_api_route("/connections", get_active_connection_ids, methods=["GET"])
     fastapi_app.add_event_handler("shutdown", on_shutdown)

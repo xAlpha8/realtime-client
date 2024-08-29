@@ -158,7 +158,7 @@ class ElevenLabsTTS(Plugin):
                     # Finalize the audio generation
                     tracing.register_event(tracing.Event.TTS_END)
                     tracing.register_metric(tracing.Metric.TTS_TOTAL_BYTES, len(audio_byte_data))
-                    tracing.log_current_stats()
+                    tracing.log_timeline()
                     self.output_queue.put_nowait(None)
                     self._generating = False
 

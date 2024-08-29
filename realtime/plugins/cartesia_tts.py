@@ -68,7 +68,7 @@ class CartesiaTTS(Plugin):
         self.stream: bool = stream
         self.base_url: str = base_url
         self.cartesia_version: str = cartesia_version
-        self._current_context_id: str = str(uuid.uuid4())
+        self._current_context_id: Optional[str] = None
         self._ws = None
 
         # Initialize queues
@@ -116,17 +116,30 @@ class CartesiaTTS(Plugin):
                         await self.connect_websocket()
                         first_chunk = False
                     if text_chunk is None or text_chunk == "":
+                        if self._current_context_id is None:
+                            continue
                         payload = {
                             "transcript": "",
                             "context_id": self._current_context_id,
+                            "model_id": self.model,
                             "continue": False,
+                            "voice": {"mode": "id", "id": self.voice_id},
+                            "output_format": {
+                                "encoding": self.output_encoding,
+                                "sample_rate": self.output_sample_rate,
+                                "container": "raw",
+                            },
                         }
                         await self._ws.send(json.dumps(payload))
 
-                        self._current_context_id = str(uuid.uuid4())
+                        self._current_context_id = None
                         continue
+                    if self._current_context_id is None:
+                        if self._generating:
+                            continue
+                        self._current_context_id = str(uuid.uuid4())
                     tracing.register_event(tracing.Event.TTS_START)
-                    logging.info("Generating TTS %s", text_chunk)
+                    logging.info("Generating TTS: %s", text_chunk)
                     payload = {
                         "voice": {"mode": "id", "id": self.voice_id},
                         "output_format": {
@@ -143,8 +156,9 @@ class CartesiaTTS(Plugin):
                     await self._ws.send(json.dumps(payload))
             except Exception as e:
                 logging.error("Error sending text to Cartesia TTS: %s", e)
-                await self.output_queue.put(None)
                 self._generating = False
+                self._current_context_id = None
+                await self.output_queue.put(None)
                 raise asyncio.CancelledError()
 
         async def receive_audio():
@@ -170,18 +184,21 @@ class CartesiaTTS(Plugin):
                                 sample_rate=self.output_sample_rate,
                             )
                         )
-                    elif response["done"]:
+                    elif response["type"] == "done":
                         tracing.register_event(tracing.Event.TTS_END)
                         tracing.register_metric(tracing.Metric.TTS_TOTAL_BYTES, total_audio_bytes)
                         total_audio_bytes = 0
-                        await self.output_queue.put(None)
                         self._generating = False
                         is_first_chunk = True
                         tracing.log_timeline()
+                        await self.output_queue.put(None)
+                    else:
+                        logging.error("Unknown response type in Cartesia TTS: %s", response)
             except Exception as e:
                 logging.error("Error receiving audio from Cartesia TTS: %s", e)
-                await self.output_queue.put(None)
                 self._generating = False
+                self._current_context_id = None
+                await self.output_queue.put(None)
                 raise asyncio.CancelledError()
 
         try:
@@ -189,6 +206,7 @@ class CartesiaTTS(Plugin):
         except asyncio.CancelledError:
             logging.info("TTS cancelled")
             self._generating = False
+            self._current_context_id = None
 
     async def close(self):
         """Close the websocket connection and cancel the main task."""

@@ -83,6 +83,7 @@ class FireworksLLM(Plugin):
                 logging.info("llm: %s", self._history[-1]["content"])
                 self.chat_history_queue.put_nowait(json.dumps(self._history[-1]))
                 self._generating = False
+                await self.output_queue.put(None)
         except Exception as e:
             logging.error("Error streaming chat completions", e)
             self._generating = False

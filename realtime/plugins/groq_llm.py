@@ -117,6 +117,7 @@ class GroqLLM(Plugin):
             print("llm", self._history[-1]["content"])
             self.chat_history_queue.put_nowait(json.dumps(self._history[-1]))
             self._generating = False
+            await self.output_queue.put(None)
 
     def run(self, input_queue: TextStream) -> Tuple[TextStream, TextStream]:
         """

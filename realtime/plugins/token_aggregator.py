@@ -50,6 +50,12 @@ class TokenAggregator(Plugin):
         """
         while True:
             token = await self.input_queue.get()
+            if token is None:
+                if self.buffer:
+                    await self.output_queue.put(self.buffer)
+                    self.buffer = ""
+                await self.output_queue.put(None)
+                continue
             if not token:
                 continue
             self.buffer += token

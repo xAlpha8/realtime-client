@@ -8,6 +8,7 @@ from typing import Dict
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from fastapi import FastAPI
 from realtime.server import RealtimeServer
+from fastapi import HTTPException
 
 ROOT = os.path.dirname(__file__)
 
@@ -56,16 +57,27 @@ def offer(audio_driver, video_driver, text_driver):
             elif track.kind == "video":
                 video_driver.add_track(track)
 
-        # handle offer
-        await pc.setRemoteDescription(offer)
-        if video_driver.video_output_q:
-            pc.addTrack(video_driver)
-        if audio_driver.audio_output_q:
-            pc.addTrack(audio_driver)
+        try:
+            # handle offer
+            await pc.setRemoteDescription(offer)
+            if video_driver.video_output_q:
+                pc.addTrack(video_driver)
+            if audio_driver.audio_output_q:
+                pc.addTrack(audio_driver)
 
-        # send answer
-        answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
+            # send answer
+            answer = await pc.createAnswer()
+            await pc.setLocalDescription(answer)
+        except Exception as e:
+            logger.error(
+                "Please check that the proper Audio and Video settings are enabled. Error handling offer: %s", e
+            )
+            await pc.close()
+            pcs.discard(pc)
+            raise HTTPException(
+                status_code=400,
+                detail="Please check that the proper Audio and Video settings are enabled.",
+            )
         return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
 
     return handshake

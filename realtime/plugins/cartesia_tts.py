@@ -69,6 +69,7 @@ class CartesiaTTS(Plugin):
         self.base_url: str = base_url
         self.cartesia_version: str = cartesia_version
         self._current_context_id: str = str(uuid.uuid4())
+        self._ws = None
 
         # Initialize queues
         self.input_queue: Optional[TextStream] = None
@@ -88,11 +89,7 @@ class CartesiaTTS(Plugin):
         self._task = asyncio.create_task(self.synthesize_speech())
         return self.output_queue
 
-    async def synthesize_speech(self):
-        """
-        Main method for speech synthesis. Connects to the Cartesia API and manages
-        the send_text and receive_audio coroutines.
-        """
+    async def connect_websocket(self):
         query_params = {
             "cartesia_version": self.cartesia_version,
             "api_key": self.api_key,
@@ -103,11 +100,21 @@ class CartesiaTTS(Plugin):
             logging.error("Error connecting to Cartesia TTS: %s", e)
             raise asyncio.CancelledError()
 
+    async def synthesize_speech(self):
+        """
+        Main method for speech synthesis. Connects to the Cartesia API and manages
+        the send_text and receive_audio coroutines.
+        """
+
         async def send_text():
             """Send text chunks to the Cartesia API for synthesis."""
+            first_chunk = True
             try:
                 while True:
                     text_chunk = await self.input_queue.get()
+                    if first_chunk:
+                        await self.connect_websocket()
+                        first_chunk = False
                     if text_chunk is None or text_chunk == "":
                         payload = {
                             "transcript": "",
@@ -146,6 +153,9 @@ class CartesiaTTS(Plugin):
                 total_audio_bytes = 0
                 is_first_chunk = True
                 while True:
+                    if self._ws is None:
+                        await asyncio.sleep(0.2)
+                        continue
                     response = await self._ws.recv()
                     response = json.loads(response)
                     if response["type"] == "chunk":

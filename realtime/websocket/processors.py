@@ -10,6 +10,7 @@ import numpy as np
 from fastapi import WebSocket
 
 from realtime.streams import AudioStream, ByteStream, TextStream, VideoStream
+from realtime.data import AudioData
 
 
 class WebsocketInputStream:
@@ -45,22 +46,8 @@ class WebsocketInputStream:
                     await self.message_stream.put(data.get("data"))
                 elif data.get("type") == "audio":
                     audio_bytes = base64.b64decode(data.get("data"))
-                    audio_data += audio_bytes
-
-                    if len(audio_data) < 2:
-                        continue
-                    if len(audio_data) % 2 != 0:
-                        # TODO: Get audio dtype from the frontend instead of hardcoding it
-                        array = np.frombuffer(audio_data[:-1], dtype=np.int16).reshape(1, -1)
-                        audio_data = audio_data[-1:]
-                    else:
-                        # TODO: Get audio dtype from the frontend instead of hardcoding it
-                        array = np.frombuffer(audio_data, dtype=np.int16).reshape(1, -1)
-                        audio_data = b""
-
-                    frame = av.AudioFrame.from_ndarray(array, format="s16", layout="mono")
-                    frame.sample_rate = self.sample_rate
-                    await self.audio_output_stream.put(frame)
+                    audio_data = AudioData(audio_bytes, sample_rate=self.sample_rate)
+                    await self.audio_output_stream.put(audio_data)
             except Exception as e:
                 logging.error("websocket: Exception", e)
                 raise asyncio.CancelledError()
@@ -104,7 +91,8 @@ class WebsocketOutputStream:
             if data is None:
                 json_data = {"type": "audio_end", "timestamp": time.time()}
                 await self.ws.send_json(json_data)
-            elif isinstance(data, bytes):
+            elif isinstance(data, AudioData):
+                data = data.get_bytes()
                 output_bytes_io = io.BytesIO()
                 in_memory_wav = wave.open(output_bytes_io, "wb")
 

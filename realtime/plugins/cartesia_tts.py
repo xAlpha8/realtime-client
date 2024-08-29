@@ -11,7 +11,7 @@ import websockets
 
 from realtime.data import AudioData
 from realtime.plugins.base_plugin import Plugin
-from realtime.streams import ByteStream, TextStream
+from realtime.streams import ByteStream, TextStream, AudioStream
 from realtime.utils import tracing
 
 
@@ -64,7 +64,7 @@ class CartesiaTTS(Plugin):
         self.model: str = model
         self.output_encoding: str = output_encoding
         self.output_sample_rate: int = output_sample_rate
-        self.output_queue: ByteStream = ByteStream()
+        self.output_queue: AudioStream = AudioStream()
         self.stream: bool = stream
         self.base_url: str = base_url
         self.cartesia_version: str = cartesia_version

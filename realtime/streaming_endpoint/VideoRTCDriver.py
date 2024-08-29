@@ -18,6 +18,8 @@ class VideoRTCDriver(MediaStreamTrack):
 
     async def recv(self):
         video_data = await self.video_output_q.get()
+        if video_data is None:
+            return None
         video_frame = video_data.get_frame()
         self._video_samples = max(self._video_samples, video_frame.pts)
         video_frame.pts = self._video_samples

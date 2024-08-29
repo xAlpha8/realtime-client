@@ -33,6 +33,7 @@ try:
     from .ops.merge import merge  # noqa: F401
     from .plugins.azure_tts import AzureTTS  # noqa: F401
     from .plugins.fireworks_llm import FireworksLLM  # noqa: F401
+    from .plugins.eleven_labs_tts import ElevenLabsTTS  # noqa: F401
 except Exception:
     print()
     print("#" * 50)
@@ -56,5 +57,6 @@ __all__ = [
     "map",
     "merge",
     "AzureTTS",
+    "ElevenLabsTTS",
     "FireworksLLM",
 ]

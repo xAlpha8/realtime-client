@@ -94,8 +94,8 @@ def streaming_endpoint() -> Callable:
                 loop = asyncio.get_event_loop()
                 tasks = asyncio.all_tasks(loop)
                 for task in tasks:
-                    task.cancel()
                     try:
+                        task.cancel()
                         await task
                     except asyncio.CancelledError:
                         logging.info("Task was cancelled")

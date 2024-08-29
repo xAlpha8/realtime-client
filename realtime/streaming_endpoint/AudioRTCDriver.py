@@ -67,6 +67,8 @@ class AudioRTCDriver(MediaStreamTrack):
         try:
             while True:
                 audio_data: AudioData = await self.audio_output_q.get()
+                if audio_data is None:
+                    continue
                 self.audio_samples = max(self.audio_samples, audio_data.get_pts())
                 for nframe in self.output_audio_resampler.resample(audio_data.get_frame()):
                     # fix timestamps

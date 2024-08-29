@@ -106,13 +106,9 @@ class DeepgramSTT(Plugin):
         :param input_queue: The queue to receive audio data from.
         :return: The output queue for transcribed text.
         """
-        try:
-            self.input_queue = input_queue
-            self._task = asyncio.create_task(self._run_ws())
-            return self.output_queue
-        except Exception:
-            logger.error("Deepgram task failed", exc_info=True)
-            raise
+        self.input_queue = input_queue
+        self._task = asyncio.create_task(self._run_ws())
+        return self.output_queue
 
     async def _run_ws(self) -> None:
         """Run the main WebSocket communication loop with Deepgram."""
@@ -130,8 +126,11 @@ class DeepgramSTT(Plugin):
         headers = {"Authorization": f"Token {self._api_key}"}
 
         url = f"wss://api.deepgram.com/v1/listen?{urlencode(live_config).lower()}"
-        async with self._session.ws_connect(url, headers=headers) as ws:
-            await asyncio.gather(self._keepalive_task(ws), self._send_task(ws), self._recv_task(ws))
+        try:
+            async with self._session.ws_connect(url, headers=headers) as ws:
+                await asyncio.gather(self._keepalive_task(ws), self._send_task(ws), self._recv_task(ws))
+        except Exception:
+            logger.error("Deepgram task failed", exc_info=True)
 
     async def _keepalive_task(self, ws: aiohttp.ClientWebSocketResponse) -> None:
         """
@@ -145,6 +144,7 @@ class DeepgramSTT(Plugin):
                 await asyncio.sleep(5)
         except Exception:
             logger.error("Keepalive task failed", exc_info=True)
+            raise asyncio.CancelledError()
 
     async def _send_task(self, ws: aiohttp.ClientWebSocketResponse) -> None:
         """
@@ -152,19 +152,23 @@ class DeepgramSTT(Plugin):
 
         :param ws: The WebSocket connection to Deepgram.
         """
-        while True:
-            data: AudioData = await self.input_queue.get()
+        try:
+            while True:
+                data: AudioData = await self.input_queue.get()
 
-            if data == _CLOSE_MSG:
-                self._closed = True
-                await ws.send_str(data)
-                break
+                if data == _CLOSE_MSG:
+                    self._closed = True
+                    await ws.send_str(data)
+                    break
 
-            bytes_data = data.get_bytes()
-            self._audio_duration_received += len(bytes_data) / (
-                self._sample_rate * self._num_channels * self._sample_width
-            )
-            await ws.send_bytes(bytes_data)
+                bytes_data = data.get_bytes()
+                self._audio_duration_received += len(bytes_data) / (
+                    self._sample_rate * self._num_channels * self._sample_width
+                )
+                await ws.send_bytes(bytes_data)
+        except Exception:
+            logger.error("Deepgram send task failed", exc_info=True)
+            raise asyncio.CancelledError()
 
     async def _recv_task(self, ws: aiohttp.ClientWebSocketResponse) -> None:
         """
@@ -172,18 +176,18 @@ class DeepgramSTT(Plugin):
 
         :param ws: The WebSocket connection to Deepgram.
         """
-        while True:
-            msg = await ws.receive()
-            if msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSING):
-                if self._closed:
-                    return
-                raise Exception("Deepgram connection closed unexpectedly")
+        try:
+            while True:
+                msg = await ws.receive()
+                if msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSING):
+                    if self._closed:
+                        return
+                    raise Exception("Deepgram connection closed unexpectedly")
 
-            if msg.type != aiohttp.WSMsgType.TEXT:
-                logger.error("Unexpected Deepgram message type %s", msg.type)
-                continue
+                if msg.type != aiohttp.WSMsgType.TEXT:
+                    logger.error("Unexpected Deepgram message type %s", msg.type)
+                    continue
 
-            try:
                 data = json.loads(msg.data)
                 if "is_final" not in data:
                     continue
@@ -198,5 +202,6 @@ class DeepgramSTT(Plugin):
                     tracing.register_event(tracing.Event.USER_SPEECH_END, time.time() - latency)
                     tracing.register_event(tracing.Event.TRANSCRIPTION_RECEIVED)
                     await self.output_queue.put(top_choice["transcript"])
-            except Exception as e:
-                logger.error("Failed to process Deepgram message: %s", e, exc_info=True)
+        except Exception:
+            logger.error("Deepgram receive task failed", exc_info=True)
+            raise asyncio.CancelledError()

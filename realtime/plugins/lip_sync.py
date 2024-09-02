@@ -4,10 +4,10 @@ import logging
 import os
 import time
 import wave
+from typing import Optional
 
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import ByteStream, TextStream
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

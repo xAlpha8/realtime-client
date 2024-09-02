@@ -1,7 +1,7 @@
 import faulthandler
 import json
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 faulthandler.enable()
 

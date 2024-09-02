@@ -2,10 +2,10 @@ import asyncio
 import json
 import logging
 import time
+from typing import Optional
 
 import google.generativeai as genai
 import PIL.PngImagePlugin  # Not used but needed to make Gemini API work with PIL  # noqa: F401
-from typing import Optional
 
 from realtime.plugins.vision_plugin import VisionPlugin
 from realtime.streams import TextStream, VideoStream

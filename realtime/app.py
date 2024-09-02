@@ -1,8 +1,9 @@
 import asyncio
 import logging
-from typing import Type, Any, Callable
-from realtime.server import RealtimeServer
+from typing import Any, Callable, Type
+
 from realtime._realtime_function import RealtimeFunction
+from realtime.server import RealtimeServer
 
 
 def App() -> Callable[[Type], Callable[..., "RealtimeApp"]]:

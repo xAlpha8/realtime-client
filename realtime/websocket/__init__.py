@@ -1,12 +1,13 @@
 import asyncio
 import functools
-import logging
-from realtime.server import RealtimeServer
-from fastapi import WebSocket
-from realtime.streams import AudioStream, TextStream, VideoStream, ByteStream
 import inspect
-from realtime.websocket.processors import WebsocketInputStream, WebsocketOutputStream
+import logging
 
+from fastapi import WebSocket
+
+from realtime.server import RealtimeServer
+from realtime.streams import AudioStream, ByteStream, TextStream, VideoStream
+from realtime.websocket.processors import WebsocketInputStream, WebsocketOutputStream
 
 logger = logging.getLogger(__name__)
 

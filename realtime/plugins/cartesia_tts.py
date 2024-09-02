@@ -11,7 +11,7 @@ import websockets
 
 from realtime.data import AudioData
 from realtime.plugins.base_plugin import Plugin
-from realtime.streams import ByteStream, TextStream, AudioStream
+from realtime.streams import AudioStream, ByteStream, TextStream
 from realtime.utils import tracing
 
 

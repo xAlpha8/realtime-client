@@ -1,7 +1,7 @@
 import asyncio
 import json
-import os
 import logging
+import os
 from typing import Tuple
 
 from openai import AsyncOpenAI

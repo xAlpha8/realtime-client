@@ -6,9 +6,9 @@ from contextlib import asynccontextmanager
 from typing import Dict
 
 from aiortc import RTCPeerConnection, RTCSessionDescription
-from fastapi import FastAPI
-from realtime.server import RealtimeServer
 from fastapi import HTTPException
+
+from realtime.server import RealtimeServer
 
 ROOT = os.path.dirname(__file__)
 

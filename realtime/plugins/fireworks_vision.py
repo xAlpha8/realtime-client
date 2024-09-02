@@ -1,8 +1,8 @@
 import asyncio
 import time
+from typing import Optional
 
 from openai import AsyncOpenAI
-from typing import Optional
 
 from realtime.plugins.vision_plugin import VisionPlugin
 

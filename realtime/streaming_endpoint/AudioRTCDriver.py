@@ -1,11 +1,12 @@
 import asyncio
 import fractions
-import time
-from av import AudioFrame
-from aiortc import MediaStreamTrack
-from realtime.data import AudioData
-from av import AudioResampler
 import logging
+import time
+
+from aiortc import MediaStreamTrack
+from av import AudioResampler
+
+from realtime.data import AudioData
 
 
 class AudioRTCDriver(MediaStreamTrack):
@@ -29,13 +30,15 @@ class AudioRTCDriver(MediaStreamTrack):
         self.output_audio_sample_rate = output_audio_sample_rate
         self.output_audio_layout = output_audio_layout
         self.output_audio_format = output_audio_format
-        self.output_audio_time_base = fractions.Fraction(1, self.output_audio_sample_rate)
+        self.output_audio_time_base = fractions.Fraction(
+            1, self.output_audio_sample_rate)
         self.output_audio_chunk_size_seconds = 0.020
         self.output_audio_resampler = AudioResampler(
             format=self.output_audio_format,
             layout=self.output_audio_layout,
             rate=self.output_audio_sample_rate,
-            frame_size=int(self.output_audio_sample_rate * self.output_audio_chunk_size_seconds),
+            frame_size=int(self.output_audio_sample_rate *
+                           self.output_audio_chunk_size_seconds),
         )
 
     async def recv(self):
@@ -69,7 +72,8 @@ class AudioRTCDriver(MediaStreamTrack):
                 audio_data: AudioData = await self.audio_output_q.get()
                 if audio_data is None:
                     continue
-                self.audio_samples = max(self.audio_samples, audio_data.get_pts())
+                self.audio_samples = max(
+                    self.audio_samples, audio_data.get_pts())
                 for nframe in self.output_audio_resampler.resample(audio_data.get_frame()):
                     # fix timestamps
                     nframe.pts = self.audio_samples

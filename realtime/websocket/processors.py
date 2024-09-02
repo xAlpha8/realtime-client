@@ -5,12 +5,10 @@ import logging
 import time
 import wave
 
-import av
-import numpy as np
 from fastapi import WebSocket
 
-from realtime.streams import AudioStream, ByteStream, TextStream, VideoStream
 from realtime.data import AudioData
+from realtime.streams import AudioStream, ByteStream, TextStream, VideoStream
 
 
 class WebsocketInputStream:

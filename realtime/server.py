@@ -1,12 +1,11 @@
+import logging
 import os
 import ssl
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import logging
-from typing import Optional
 
 
 class RealtimeServer:

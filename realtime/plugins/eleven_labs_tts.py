@@ -7,7 +7,7 @@ import aiohttp
 
 from realtime.data import AudioData
 from realtime.plugins.base_plugin import Plugin
-from realtime.streams import AudioStream, TextStream
+from realtime.streams import AudioStream, ByteStream, TextStream
 from realtime.utils import tracing
 
 logger = logging.getLogger(__name__)
@@ -64,11 +64,15 @@ class ElevenLabsTTS(Plugin):
             self.sample_rate = 16000
         elif self._output_format == "pcm_24000":
             self.sample_rate = 24000
+        elif self._output_format == "mp3_22050_32":
+            self.sample_rate = 22050
+        elif self._output_format == "mp3_44100_128":
+            self.sample_rate = 44100
         else:
             raise ValueError(f"Unsupported output format: {self._output_format}")
 
         # Initialize output queue and state variables
-        self.output_queue = AudioStream()
+        self.output_queue = ByteStream()
         self._generating = False
         self.session: Optional[aiohttp.ClientSession] = None
         self._task: Optional[asyncio.Task] = None
@@ -138,7 +142,7 @@ class ElevenLabsTTS(Plugin):
                                         first_chunk = False
                                     audio_byte_data += chunk
                                     audio_buffer += chunk
-                                    if len(audio_buffer) >= 2:
+                                    if len(audio_buffer) >= 4000:
                                         if len(audio_buffer) % 2 != 0:
                                             self.output_queue.put_nowait(
                                                 AudioData(audio_buffer[:-1], sample_rate=self.sample_rate)
@@ -149,6 +153,9 @@ class ElevenLabsTTS(Plugin):
                                                 AudioData(audio_buffer, sample_rate=self.sample_rate)
                                             )
                                             audio_buffer = b""
+                            if len(audio_buffer) > 0:
+                                self.output_queue.put_nowait(AudioData(audio_buffer, sample_rate=self.sample_rate))
+                                audio_buffer = b""
                         else:
                             # Non-streaming mode: process entire response at once
                             audio_byte_data = await r.read()

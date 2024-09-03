@@ -1,3 +1,4 @@
+from enum import Enum
 import faulthandler
 import json
 from concurrent.futures import ThreadPoolExecutor
@@ -49,6 +50,11 @@ viseme_id_to_mouth_shapes: Dict[int, str] = {
 }
 
 
+class AzureOutputFormat(Enum):
+    pcm_16000 = speechsdk.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm
+    mp3_16000 = speechsdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3
+
+
 class AzureTTS(Plugin):
     """
     A plugin for Azure Text-to-Speech synthesis.
@@ -62,7 +68,7 @@ class AzureTTS(Plugin):
         *,
         api_key: Optional[str] = None,
         voice_id: str = "en-US-AvaMultilingualNeural",
-        output_format: str = "pcm_16000",
+        output_format: Union[AzureOutputFormat, str] = "pcm_16000",
         optimize_streaming_latency: int = 4,
         stream: bool = True,
         azure_speech_region: Optional[str] = None,
@@ -89,9 +95,23 @@ class AzureTTS(Plugin):
             raise ValueError("Please set AZURE_SPEECH_REGION environment variable or pass it as a parameter")
 
         self._voice_id = voice_id
-        self._output_format = output_format
+        if isinstance(output_format, str):
+            output_format = AzureOutputFormat[output_format]
+        self._output_format = output_format.value
         self._optimize_streaming_latency = optimize_streaming_latency
         self._stream = stream
+
+        # TODO: Remove hardcoded sample rate, channels, and sample width
+        if self._output_format == speechsdk.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm:
+            self.sample_rate = 16000
+            self.channels = 1
+            self.sample_width = 2
+        elif self._output_format == speechsdk.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3:
+            self.sample_rate = 16000
+            self.channels = 1
+            self.sample_width = 2
+        else:
+            raise ValueError(f"Unsupported Azure TTS output format: {self._output_format}")
 
         # Initialize streams and data structures
         self.output_queue = ByteStream()
@@ -103,15 +123,8 @@ class AzureTTS(Plugin):
 
         # Set up Azure Speech configuration
         self._speech_config = speechsdk.SpeechConfig(subscription=self._api_key, region=self._azure_speech_region)
-        self._speech_config.set_speech_synthesis_output_format(
-            speechsdk.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm
-        )
+        self._speech_config.set_speech_synthesis_output_format(self._output_format)
         self._speech_config.speech_synthesis_voice_name = voice_id
-
-        # TODO: Remove hardcoded sample rate, channels, and sample width
-        self.sample_rate = 16000
-        self.channels = 1
-        self.sample_width = 2
 
         # Initialize speech synthesizer
         try:

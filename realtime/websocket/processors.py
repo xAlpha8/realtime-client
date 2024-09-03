@@ -1,15 +1,14 @@
 import asyncio
 import base64
-import io
 import logging
 import time
-import wave
 
+import numpy as np
+import scipy.signal as signal
 from fastapi import WebSocket
 
 from realtime.data import AudioData
 from realtime.streams import AudioStream, ByteStream, TextStream, VideoStream
-from pydub import AudioSegment
 
 
 def resample_wav_bytes(audio_data: AudioData, target_sample_rate: int) -> bytes:
@@ -27,15 +26,17 @@ def resample_wav_bytes(audio_data: AudioData, target_sample_rate: int) -> bytes:
     if audio_data.sample_rate == target_sample_rate:
         return wav_bytes
     # Load WAV bytes into AudioSegment
-    audio = AudioSegment.from_wav(io.BytesIO(wav_bytes))
+    audio_array = np.frombuffer(wav_bytes, dtype=np.int16)
 
-    # Resample the audio
-    resampled_audio = audio.set_frame_rate(target_sample_rate)
+    # Calculate the resampling ratio
+    ratio = target_sample_rate / audio_data.sample_rate
 
-    # Export the resampled audio to bytes
-    output = io.BytesIO()
-    resampled_audio.export(output, format="wav")
-    return output.getvalue()
+    # Resample the audio using scipy.signal.resample
+    resampled_audio = signal.resample(audio_array, int(len(audio_array) * ratio))
+
+    resampled_audio = resampled_audio.astype(np.int16).tobytes()
+
+    return resampled_audio
 
 
 class WebsocketInputStream:

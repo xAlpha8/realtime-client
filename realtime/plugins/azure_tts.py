@@ -3,7 +3,6 @@ import faulthandler
 import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple, Union
-import uuid
 
 faulthandler.enable()
 
@@ -116,11 +115,9 @@ class AzureTTS(Plugin):
 
         # Initialize streams and data structures
         self.output_queue = ByteStream()
+        self._text_queue = TextStream()
         self.viseme_stream = TextStream()
-        self._viseme_data: Dict[str, List[Dict[str, Union[str, int, float]]]] = {
-            "mouthCues": [],
-            "context_id": str(uuid.uuid4()),
-        }
+        self._viseme_data: Dict[str, List[Dict[str, Union[str, int, float]]]] = {"mouthCues": []}
         self._generating = False
         self._task: Optional[asyncio.Task] = None
         self.thread_pool_executor = ThreadPoolExecutor(max_workers=1)
@@ -176,8 +173,16 @@ class AzureTTS(Plugin):
             Tuple[ByteStream, TextStream]: A tuple containing the audio output stream and the viseme stream.
         """
         self.input_queue = input_queue
-        self._task = asyncio.create_task(self.synthesize_speech())
+        self._task = asyncio.gather(self.synthesize_speech(), self._process_text())
         return self.output_queue, self.viseme_stream
+
+    async def _process_text(self):
+        while True:
+            text_chunk = await self.input_queue.get()
+            if self._generating:
+                continue
+
+            await self._text_queue.put(text_chunk)
 
     async def synthesize_speech(self) -> None:
         """
@@ -187,7 +192,7 @@ class AzureTTS(Plugin):
         and sends the audio data to the output queue.
         """
         while True:
-            text_chunk = await self.input_queue.get()
+            text_chunk = await self._text_queue.get()
             if not text_chunk:
                 continue
 
@@ -202,9 +207,9 @@ class AzureTTS(Plugin):
 
             tracing.register_event(tracing.Event.TTS_END)
             tracing.log_timeline()
-            await self.output_queue.put(None)
-            self._viseme_data = {"mouthCues": [], "context_id": str(uuid.uuid4())}
+            self._viseme_data = {"mouthCues": []}
             self._generating = False
+            await self.output_queue.put(None)
 
     async def _stream_synthesis(self, text_chunk: str) -> None:
         """

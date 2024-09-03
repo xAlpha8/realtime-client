@@ -1,3 +1,4 @@
+import json
 import logging
 
 import realtime as rt
@@ -30,7 +31,7 @@ class VoiceBot:
         pass
 
     @rt.streaming_endpoint()
-    async def run(self, audio_input_queue: rt.AudioStream) -> rt.AudioStream:
+    async def run(self, audio_input_queue: rt.AudioStream, text_input_queue: rt.TextStream) -> rt.AudioStream:
         """
         Handle the main processing loop for the VoiceBot.
 
@@ -46,8 +47,8 @@ class VoiceBot:
         """
         # Initialize the AI services
         self.deepgram_node = rt.DeepgramSTT(sample_rate=8000)
-        self.llm_node = rt.GroqLLM(
-            system_prompt="You are a helpful assistant. Keep your answers very short.",
+        self.llm_node = rt.FireworksLLM(
+            system_prompt="You are a helpful assistant. Keep your answers very short. No special characters in responses.",
         )
         self.token_aggregator_node = rt.TokenAggregator()
         self.tts_node = rt.CartesiaTTS(
@@ -60,15 +61,19 @@ class VoiceBot:
 
         # Set up the AI service pipeline
         deepgram_stream: rt.TextStream = self.deepgram_node.run(audio_input_queue)
+
+        text_input_queue = rt.map(text_input_queue, lambda x: json.loads(x).get("content"))
+
+        llm_input_queue: rt.TextStream = rt.merge(
+            [deepgram_stream, text_input_queue],
+        )
         # vad_output_queue: rt.TextStream = self.vad_node.run(audio_input_queue_copy)
 
         llm_token_stream: rt.TextStream
         chat_history_stream: rt.TextStream
-        llm_token_stream, chat_history_stream = self.llm_node.run(deepgram_stream)
+        llm_token_stream, chat_history_stream = self.llm_node.run(llm_input_queue)
 
-        token_aggregator_stream: rt.TextStream = self.token_aggregator_node.run(
-            llm_token_stream
-        )
+        token_aggregator_stream: rt.TextStream = self.token_aggregator_node.run(llm_token_stream)
         tts_stream: rt.AudioStream = self.tts_node.run(token_aggregator_stream)
 
         # Uncomment the following lines to set up interrupt handling

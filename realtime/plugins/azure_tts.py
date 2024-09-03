@@ -3,6 +3,7 @@ import faulthandler
 import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple, Union
+import uuid
 
 faulthandler.enable()
 
@@ -116,7 +117,10 @@ class AzureTTS(Plugin):
         # Initialize streams and data structures
         self.output_queue = ByteStream()
         self.viseme_stream = TextStream()
-        self._viseme_data: Dict[str, List[Dict[str, Union[str, int, float]]]] = {"mouthCues": []}
+        self._viseme_data: Dict[str, List[Dict[str, Union[str, int, float]]]] = {
+            "mouthCues": [],
+            "context_id": str(uuid.uuid4()),
+        }
         self._generating = False
         self._task: Optional[asyncio.Task] = None
         self.thread_pool_executor = ThreadPoolExecutor(max_workers=1)
@@ -199,7 +203,7 @@ class AzureTTS(Plugin):
             tracing.register_event(tracing.Event.TTS_END)
             tracing.log_timeline()
             await self.output_queue.put(None)
-            self._viseme_data = {"mouthCues": []}
+            self._viseme_data = {"mouthCues": [], "context_id": str(uuid.uuid4())}
             self._generating = False
 
     async def _stream_synthesis(self, text_chunk: str) -> None:

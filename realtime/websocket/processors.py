@@ -9,6 +9,33 @@ from fastapi import WebSocket
 
 from realtime.data import AudioData
 from realtime.streams import AudioStream, ByteStream, TextStream, VideoStream
+from pydub import AudioSegment
+
+
+def resample_wav_bytes(audio_data: AudioData, target_sample_rate: int) -> bytes:
+    """
+    Resample WAV bytes to a target sample rate.
+
+    Args:
+        wav_bytes (bytes): The input WAV file as bytes.
+        target_sample_rate (int): The desired sample rate in Hz.
+
+    Returns:
+        bytes: The resampled WAV file as bytes.
+    """
+    wav_bytes = audio_data.get_bytes()
+    if audio_data.sample_rate == target_sample_rate:
+        return wav_bytes
+    # Load WAV bytes into AudioSegment
+    audio = AudioSegment.from_wav(io.BytesIO(wav_bytes))
+
+    # Resample the audio
+    resampled_audio = audio.set_frame_rate(target_sample_rate)
+
+    # Export the resampled audio to bytes
+    output = io.BytesIO()
+    resampled_audio.export(output, format="wav")
+    return output.getvalue()
 
 
 class WebsocketInputStream:
@@ -59,8 +86,9 @@ class WebsocketOutputStream:
         ws (WebSocket): The WebSocket connection.
     """
 
-    def __init__(self, ws: WebSocket):
+    def __init__(self, ws: WebSocket, sample_rate: int = 48000):
         self.ws = ws
+        self.sample_rate = sample_rate
 
     async def run(
         self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, byte_stream: ByteStream
@@ -85,27 +113,24 @@ class WebsocketOutputStream:
             input_stream (Stream): The stream from which to send data.
         """
         while True:
-            data = await input_stream.get()
-            if data is None:
+            if not input_stream:
+                break
+            audio_data = await input_stream.get()
+            if audio_data is None:
+                print("Sending audio end")
                 json_data = {"type": "audio_end", "timestamp": time.time()}
                 await self.ws.send_json(json_data)
-            elif isinstance(data, AudioData):
-                data = data.get_bytes()
-                output_bytes_io = io.BytesIO()
-                in_memory_wav = wave.open(output_bytes_io, "wb")
-
-                # TODO: Get channels, sample width, and sample rate from TTS module instead of hardcoding it
-                in_memory_wav.setnchannels(1)
-                in_memory_wav.setsampwidth(2)
-                in_memory_wav.setframerate(16000)
-
-                in_memory_wav.writeframes(data)
-                output_bytes_io.seek(0)
-                data = output_bytes_io.read()
-                json_data = {"type": "audio", "data": base64.b64encode(data).decode(), "timestamp": time.time()}
+            elif isinstance(audio_data, AudioData):
+                data = resample_wav_bytes(audio_data, self.sample_rate)
+                json_data = {
+                    "type": "audio",
+                    "data": base64.b64encode(data).decode(),
+                    "timestamp": time.time(),
+                    "sample_rate": audio_data.sample_rate,
+                }
                 await self.ws.send_json(json_data)
-            elif isinstance(data, str):
-                json_data = {"type": "message", "data": data, "timestamp": time.time()}
+            elif isinstance(audio_data, str):
+                json_data = {"type": "message", "data": audio_data, "timestamp": time.time()}
                 await self.ws.send_json(json_data)
             else:
-                raise ValueError(f"Unsupported data type: {type(data)}")
+                raise ValueError(f"Unsupported data type: {type(audio_data)}")

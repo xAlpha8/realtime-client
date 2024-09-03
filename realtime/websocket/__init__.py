@@ -34,7 +34,7 @@ def websocket(path: str = "/"):
                 parameters = signature.parameters
                 for name, param in parameters.items():
                     if param.annotation == AudioStream:
-                        audio_input_q = AudioStream(sample_rate=audio_metadata.get("sampleRate", 48000))
+                        audio_input_q = AudioStream(sample_rate=audio_metadata.get("inputSampleRate", 48000))
                         kwargs[name] = audio_input_q
                     elif param.annotation == VideoStream:
                         video_input_q = VideoStream()
@@ -64,7 +64,7 @@ def websocket(path: str = "/"):
                     WebsocketInputStream(websocket, audio_metadata.get("sampleRate", 48000)).run(
                         audio_stream=audio_input_q, message_stream=text_input_q, video_stream=video_input_q
                     ),
-                    WebsocketOutputStream(websocket).run(
+                    WebsocketOutputStream(websocket, audio_metadata.get("outputSampleRate", 48000)).run(
                         audio_stream=aq, message_stream=tq, video_stream=vq, byte_stream=bq
                     ),
                 ]

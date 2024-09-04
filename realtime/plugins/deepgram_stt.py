@@ -43,7 +43,7 @@ class DeepgramSTT(Plugin):
         sample_rate: int = 16000,
         num_channels: int = 1,
         sample_width: int = 2,
-        min_silence_duration: int = 100,
+        min_silence_duration: int = 10,
         confidence_threshold: float = 0.8,
     ) -> None:
         """
@@ -88,6 +88,7 @@ class DeepgramSTT(Plugin):
         self._audio_duration_received: float = 0.0
         self.input_queue: Optional[asyncio.Queue] = None
         self._task: Optional[asyncio.Task] = None
+        self._ws: Optional[aiohttp.ClientWebSocketResponse] = None
 
     async def close(self) -> None:
         """Close the Deepgram connection and clean up resources."""
@@ -110,8 +111,8 @@ class DeepgramSTT(Plugin):
         self._task = asyncio.create_task(self._run_ws())
         return self.output_queue
 
-    async def _run_ws(self) -> None:
-        """Run the main WebSocket communication loop with Deepgram."""
+    async def _connect_ws(self) -> None:
+        """Connect to the Deepgram WebSocket API."""
         live_config: Dict[str, Any] = {
             "model": self.model,
             "punctuate": self.punctuate,
@@ -127,12 +128,19 @@ class DeepgramSTT(Plugin):
 
         url = f"wss://api.deepgram.com/v1/listen?{urlencode(live_config).lower()}"
         try:
-            async with self._session.ws_connect(url, headers=headers) as ws:
-                await asyncio.gather(self._keepalive_task(ws), self._send_task(ws), self._recv_task(ws))
+            self._ws = await self._session.ws_connect(url, headers=headers)
+        except Exception:
+            logger.error("Deepgram connection failed", exc_info=True)
+            raise asyncio.CancelledError()
+
+    async def _run_ws(self) -> None:
+        """Run the main WebSocket communication loop with Deepgram."""
+        try:
+            await asyncio.gather(self._keepalive_task(), self._send_task(), self._recv_task())
         except Exception:
             logger.error("Deepgram task failed", exc_info=True)
 
-    async def _keepalive_task(self, ws: aiohttp.ClientWebSocketResponse) -> None:
+    async def _keepalive_task(self) -> None:
         """
         Send keepalive messages to maintain the WebSocket connection.
 
@@ -140,13 +148,14 @@ class DeepgramSTT(Plugin):
         """
         try:
             while True:
-                await ws.send_str(_KEEPALIVE_MSG)
+                if self._ws:
+                    await self._ws.send_str(_KEEPALIVE_MSG)
                 await asyncio.sleep(5)
         except Exception:
             logger.error("Keepalive task failed", exc_info=True)
             raise asyncio.CancelledError()
 
-    async def _send_task(self, ws: aiohttp.ClientWebSocketResponse) -> None:
+    async def _send_task(self) -> None:
         """
         Send audio data to Deepgram through the WebSocket.
 
@@ -155,22 +164,24 @@ class DeepgramSTT(Plugin):
         try:
             while True:
                 data: AudioData = await self.input_queue.get()
+                if not self._ws:
+                    await self._connect_ws()
 
                 if data == _CLOSE_MSG:
                     self._closed = True
-                    await ws.send_str(data)
+                    await self._ws.send_str(data)
                     break
 
                 bytes_data = data.get_bytes()
                 self._audio_duration_received += len(bytes_data) / (
                     self._sample_rate * self._num_channels * self._sample_width
                 )
-                await ws.send_bytes(bytes_data)
+                await self._ws.send_bytes(bytes_data)
         except Exception:
             logger.error("Deepgram send task failed", exc_info=True)
             raise asyncio.CancelledError()
 
-    async def _recv_task(self, ws: aiohttp.ClientWebSocketResponse) -> None:
+    async def _recv_task(self) -> None:
         """
         Receive and process transcription results from Deepgram.
 
@@ -178,7 +189,11 @@ class DeepgramSTT(Plugin):
         """
         try:
             while True:
-                msg = await ws.receive()
+                if not self._ws:
+                    await asyncio.sleep(0.2)
+                    continue
+
+                msg = await self._ws.receive()
                 if msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSING):
                     if self._closed:
                         return

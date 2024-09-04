@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "realtime-client"
-version = "0.1.135"
+version = "0.1.136"
 description = ""
 authors = ["Adapt <hello@getadapt.ai>"]
 readme = "README.md"

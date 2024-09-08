@@ -13,6 +13,13 @@ async def websocket_handler(websocket, websocket_input_processor, websocket_outp
         await websocket.accept()
         audio_metadata = await websocket.receive_json()
 
+        # run the tasks
+        websocket_input_processor.connect(websocket)
+        websocket_output_processor.connect(websocket)
+
+        tasks = [websocket_input_processor.run(), websocket_output_processor.run()]
+        asyncio.gather(*tasks)
+
     except asyncio.CancelledError:
         logging.error("websocket: CancelledError")
     except Exception as e:

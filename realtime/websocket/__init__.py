@@ -9,6 +9,7 @@ from fastapi import WebSocket
 from realtime.server import RealtimeServer
 from realtime.streams import AudioStream, ByteStream, TextStream, VideoStream
 from realtime.websocket.processors import WebsocketInputStream, WebsocketOutputStream
+from realtime.websocket.server import create_and_run_server
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,12 @@ def websocket(path: str = "/"):
                     )
                 websocket_output_processor = WebsocketOutputStream(sample_rate=audio_metadata.get("output_sample_rate", 48000),
                         audio_stream=aq, message_stream=tq, video_stream=vq, byte_stream=bq)
+
+                create_and_run_server(path, websocket_input_processor, websocket_output_processor)
+            except Exception as e:
+                logging.error(f"Error in websocket_endpoint: {e}")
+                pass
+        return wrapper
 
 
     return decorator

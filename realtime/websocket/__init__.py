@@ -1,4 +1,5 @@
 import asyncio
+from typing import Callable, List, Optional, Tuple, Union
 import functools
 import inspect
 import logging
@@ -18,8 +19,9 @@ def websocket(path: str = "/"):
     TODO: Add video support
     """
 
-    def decorator(func):
-        async def websocket_handler(websocket: WebSocket):
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs) -> None:
             RealtimeServer().add_connection()
             try:
                 await websocket.accept()
@@ -60,25 +62,11 @@ def websocket(path: str = "/"):
                         bq = s
 
                 # TODO: Update the default sample rate to be consistent across all plugins
-                tasks = [
-                    WebsocketInputStream(websocket, audio_metadata.get("input_sample_rate", 48000)).run(
+                websocket_input_processor = WebsocketInputStream(sample_rate=audio_metadata.get("input_sample_rate", 48000),
                         audio_stream=audio_input_q, message_stream=text_input_q, video_stream=video_input_q
-                    ),
-                    WebsocketOutputStream(websocket, audio_metadata.get("output_sample_rate", 48000)).run(
-                        audio_stream=aq, message_stream=tq, video_stream=vq, byte_stream=bq
-                    ),
-                ]
+                    )
+                websocket_output_processor = WebsocketOutputStream(sample_rate=audio_metadata.get("output_sample_rate", 48000),
+                        audio_stream=aq, message_stream=tq, video_stream=vq, byte_stream=bq)
 
-                await asyncio.gather(*tasks)
-            except asyncio.CancelledError:
-                logging.error("websocket: CancelledError")
-            except Exception as e:
-                logging.error("websocket: Error in websocket: ", e)
-            finally:
-                logging.info("websocket: Removing connection")
-                RealtimeServer().remove_connection()
-
-        fastapi_app = RealtimeServer().get_app()
-        fastapi_app.websocket(path)(websocket_handler)
 
     return decorator

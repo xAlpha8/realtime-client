@@ -50,6 +50,15 @@ class WebsocketInputProcessor:
         message_stream (TextStream): The stream for input text messages.
         video_stream (VideoStream): The stream for input video data.
     """
+    @property
+    def sample_rate(self) -> int:
+        return self._sample_rate
+
+    @sample_rate.setter
+    def sample_rate(self, value: int):
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError("Sample rate must be a positive integer")
+        self._sample_rate = value
 
     def __init__(self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, sample_rate: int = 48000):
         self.ws = None
@@ -58,8 +67,8 @@ class WebsocketInputProcessor:
         self.message_stream = message_stream
         self.video_stream = video_stream
 
-    def connect(self, ws: WebSocket):
-        self.ws = ws
+    def setInputTrack(self, track: TextStream):
+        self._inputTrack = track
 
     async def run(self):
         """
@@ -76,7 +85,7 @@ class WebsocketInputProcessor:
         audio_data = b""
         while True:
             try:
-                data = await self.ws.receive_json()
+                data = await self._inputTrack.get()
                 if data.get("type") == "message":
                     await self.message_stream.put(data.get("data"))
                 elif data.get("type") == "audio":
@@ -138,6 +147,15 @@ class WebsocketOutputProcessor:
         video_stream (VideoStream): The video stream to send.
         byte_stream (ByteStream): The byte stream to send.
     """
+    @property
+    def sample_rate(self) -> int:
+        return self._sample_rate
+
+    @sample_rate.setter
+    def sample_rate(self, value: int):
+        if not isinstance(value, int) or value <= 0:
+            raise ValueError("Sample rate must be a positive integer")
+        self._sample_rate = value
 
     def __init__(self, sample_rate: int, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, byte_stream: ByteStream
 ):
@@ -148,8 +166,8 @@ class WebsocketOutputProcessor:
         self.video_stream = video_stream
         self.byte_stream = byte_stream
 
-    def connect(self, ws: WebSocket):
-        self.ws = ws
+    def setOutputTrack(self, track: TextStream):
+        self._outputTrack = track
 
     async def run(
         self):
@@ -176,7 +194,7 @@ class WebsocketOutputProcessor:
             if audio_data is None:
                 print("Sending audio end")
                 json_data = {"type": "audio_end", "timestamp": time.time()}
-                await self.ws.send_json(json_data)
+                await self._outputTrack.put(json_data)
             elif isinstance(audio_data, AudioData):
                 data = resample_wav_bytes(audio_data, self.sample_rate)
                 json_data = {
@@ -185,10 +203,10 @@ class WebsocketOutputProcessor:
                     "timestamp": time.time(),
                     "sample_rate": audio_data.sample_rate,
                 }
-                await self.ws.send_json(json_data)
+                await self._outputTrack.put(json_data)
             elif isinstance(audio_data, str):
                 json_data = {"type": "message", "data": audio_data, "timestamp": time.time()}
-                await self.ws.send_json(json_data)
+                await self._outputTrack.put(json_data)
             else:
                 raise ValueError(f"Unsupported data type: {type(audio_data)}")
 

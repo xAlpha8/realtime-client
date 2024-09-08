@@ -4,10 +4,11 @@ import inspect
 import logging
 from typing import Callable, List, Optional, Tuple, Union
 
+from realtime._realtime_function import RealtimeFunction
 from realtime.server import RealtimeServer
 from realtime.streams import AudioStream, ByteStream, TextStream, VideoStream
+from realtime.websocket.handler import create_and_add_ws_handler
 from realtime.websocket.processors import WebsocketInputProcessor, WebsocketOutputProcessor
-from realtime.websocket.server import create_and_run_server
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ def websocket(path: str = "/"):
                         text_input_q = TextStream()
                         kwargs[name] = text_input_q
 
-                output_streams = await func(**kwargs)
+                output_streams = await func(*args, **kwargs)
 
                 if not isinstance(output_streams, (list, tuple)):
                     output_streams = (output_streams,)
@@ -56,18 +57,24 @@ def websocket(path: str = "/"):
                     elif isinstance(s, ByteStream):
                         bq = s
 
+
                 # TODO: Update the default sample rate to be consistent across all plugins
                 websocket_input_processor = WebsocketInputProcessor(audio_stream=audio_input_q, message_stream=text_input_q, video_stream=video_input_q)
                 websocket_output_processor = WebsocketOutputProcessor(audio_stream=aq, message_stream=tq, video_stream=vq, byte_stream=bq)
-                create_and_run_server(path, websocket_input_processor, websocket_output_processor)
+
+                create_and_add_ws_handler(path, websocket_input_processor, websocket_output_processor)
+
                 tasks = [websocket_input_processor.run(), websocket_output_processor.run()]
                 await asyncio.gather(*tasks)
 
-                await create_and_run_server(path, websocket_input_processor, websocket_output_processor)
+            except asyncio.CancelledError:
+                logging.error("websocket: CancelledError")
             except Exception as e:
-                logging.error(f"Error in websocket_endpoint: {e}")
-                pass
-        return wrapper
+                logging.error("websocket: Error in websocket: ", e)
+            finally:
+                logging.info("websocket: Removing connection")
+                RealtimeServer().remove_connection()
 
-
+        rt_func = RealtimeFunction(wrapper)
+        return rt_func
     return decorator

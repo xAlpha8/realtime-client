@@ -61,11 +61,11 @@ class WebsocketInputProcessor:
         self._sample_rate = value
 
     def __init__(self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, sample_rate: int = 48000):
-        self.ws = None
-        self.sample_rate = sample_rate
         self.audio_output_stream = audio_stream
         self.message_stream = message_stream
         self.video_stream = video_stream
+        self.sample_rate = sample_rate
+        self._inputTrack = None
 
     def setInputTrack(self, track: TextStream):
         self._inputTrack = track
@@ -77,11 +77,10 @@ class WebsocketInputProcessor:
         Returns:
             Tuple[AudioStream, TextStream]: A tuple containing the audio and message streams.
         """
-        if (self.ws is None):
-            raise ValueError("WebSocket connection is not initialized")
-
         # TODO: Implement video stream processing
 
+        while not self._inputTrack:
+            await asyncio.sleep(0.2)
         audio_data = b""
         while True:
             try:
@@ -118,14 +117,13 @@ class WebsocketOutputProcessor:
             raise ValueError("Sample rate must be a positive integer")
         self._sample_rate = value
 
-    def __init__(self, sample_rate: int, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, byte_stream: ByteStream
+    def __init__(self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, byte_stream: ByteStream
 ):
-        self.ws = None
-        self.sample_rate = sample_rate
         self.audio_stream = audio_stream
         self.message_stream = message_stream
         self.video_stream = video_stream
         self.byte_stream = byte_stream
+        self._outputTrack = None
 
     def setOutputTrack(self, track: TextStream):
         self._outputTrack = track
@@ -136,9 +134,6 @@ class WebsocketOutputProcessor:
         Starts tasks to process and send byte and text streams.
         """
         # TODO: Implement video stream and audio stream processing
-        if (self.ws is None):
-            raise ValueError("WebSocket connection is not initialized")
-
         await asyncio.gather(self.task(self.byte_stream), self.task(self.message_stream))
 
     async def task(self, input_stream):
@@ -148,6 +143,8 @@ class WebsocketOutputProcessor:
         Args:
             input_stream (Stream): The stream from which to send data.
         """
+        while not self._outputTrack:
+            await asyncio.sleep(0.2)
         while True:
             if not input_stream:
                 break

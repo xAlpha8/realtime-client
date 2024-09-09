@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_websocket_handler(
-        websocket_input_processor: WebsocketInputProcessor,
-        websocket_output_processor: WebsocketOutputProcessor):
+    websocket_input_processor: WebsocketInputProcessor, websocket_output_processor: WebsocketOutputProcessor
+):
     async def websocket_handler(websocket: WebSocket):
         RealtimeServer().add_connection()
         try:
@@ -41,19 +41,17 @@ def get_websocket_handler(
             websocket_output_processor.setOutputTrack(oq)
             websocket_output_processor.sample_rate = audio_metadata.get("output_sample_rate", 48000)
 
-            tasks = [
-                asyncio.create_task(receive_data()),
-                asyncio.create_task(send_data())
-            ]
+            tasks = [asyncio.create_task(receive_data()), asyncio.create_task(send_data())]
 
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
             logging.error("websocket: CancelledError")
         except Exception as e:
-            logging.error("websocket: Error in websocket: ", e)
+            logging.error(f"websocket: Error in websocket: {str(e)}")
         finally:
             logging.info("websocket: Removing connection")
             RealtimeServer().remove_connection()
+
     return websocket_handler
 
 
@@ -67,6 +65,9 @@ async def on_shutdown():
 
 def create_and_add_ws_handler(path, websocket_input_processor, websocket_output_processor):
     fastapi_app = RealtimeServer().get_app()
-    fastapi_app.websocket(path)(get_websocket_handler(websocket_input_processor=websocket_input_processor,
-                                        websocket_output_processor=websocket_output_processor))
+    fastapi_app.websocket(path)(
+        get_websocket_handler(
+            websocket_input_processor=websocket_input_processor, websocket_output_processor=websocket_output_processor
+        )
+    )
     fastapi_app.add_event_handler("shutdown", on_shutdown)

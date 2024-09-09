@@ -55,10 +55,6 @@ class VoiceBot:
             voice_id="95856005-0332-41b0-935f-352e296aa0df",
         )
 
-        # Uncomment the following lines to enable voice activity detection for handling interrupts
-        # self.vad_node = rt.SileroVAD()
-        # audio_input_queue_copy = audio_input_queue.clone()
-
         # Set up the AI service pipeline
         deepgram_stream: rt.TextStream = self.deepgram_node.run(audio_input_queue)
 
@@ -67,7 +63,6 @@ class VoiceBot:
         llm_input_queue: rt.TextStream = rt.merge(
             [deepgram_stream, text_input_queue],
         )
-        # vad_output_queue: rt.TextStream = self.vad_node.run(audio_input_queue_copy)
 
         llm_token_stream: rt.TextStream
         chat_history_stream: rt.TextStream
@@ -75,11 +70,6 @@ class VoiceBot:
 
         token_aggregator_stream: rt.TextStream = self.token_aggregator_node.run(llm_token_stream)
         tts_stream: rt.AudioStream = self.tts_node.run(token_aggregator_stream)
-
-        # Uncomment the following lines to set up interrupt handling
-        # await self.llm_node.set_interrupt(vad_output_queue)
-        # await self.token_aggregator_node.set_interrupt(await vad_output_queue.clone())
-        # await self.tts_node.set_interrupt(await vad_output_queue.clone())
 
         return tts_stream
 
@@ -94,8 +84,6 @@ class VoiceBot:
         await self.llm_node.close()
         await self.token_aggregator_node.close()
         await self.tts_node.close()
-        # Uncomment the following line if using VAD
-        # await self.vad_node.close()
 
 
 if __name__ == "__main__":

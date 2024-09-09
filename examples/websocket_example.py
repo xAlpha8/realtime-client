@@ -28,11 +28,15 @@ class WebsocketVoiceBot:
         self.tts_node = rt.ElevenLabsTTS(stream=True)
 
     @rt.websocket()
-    async def run(self, audio_input_stream: rt.AudioStream) -> rt.AudioStream:
+    async def run(self, audio_input_stream: rt.AudioStream, text_input_stream: rt.TextStream) -> rt.AudioStream:
 
         deepgram_stream = self.deepgram_node.run(audio_input_stream)
 
-        llm_token_stream, _ = self.llm_node.run(deepgram_stream)
+        llm_input_queue: rt.TextStream = rt.merge(
+            [deepgram_stream, text_input_stream],
+        )
+
+        llm_token_stream, _ = self.llm_node.run(llm_input_queue)
         token_aggregator_stream: rt.TextStream = self.token_aggregator_node.run(llm_token_stream)
 
         tts_stream = self.tts_node.run(token_aggregator_stream)

@@ -13,6 +13,8 @@ server = RealtimeServer()
 server.PORT = 8000
 
 
+# TODO: Add testing for other data formats (apart from just audio and text)
+
 @websocket("/test")
 async def test_handler(audio: AudioStream, text: TextStream):
     return audio, text
@@ -22,12 +24,11 @@ async def test_handler(audio: AudioStream, text: TextStream):
 async def test_websocket_decorator_basic_functionality():
     tasks = []
     tasks.append(asyncio.create_task(test_handler()))
-    await asyncio.sleep(1)
     tasks.append(asyncio.create_task(server.start()))
     await asyncio.sleep(1)
     try:
         async with websockets.connect("ws://localhost:8000/test") as websocket:
-            await websocket.send(json.dumps({}))
+            await websocket.send(json.dumps({"type": "audio_metadata"}))
             await websocket.send(json.dumps({"type": "message", "data": "Hello from test_handler"}))
             data = await websocket.recv()
             data = json.loads(data)

@@ -19,7 +19,7 @@ def get_websocket_handler(
         RealtimeServer().add_connection()
         try:
             await websocket.accept()
-            audio_metadata = await websocket.receive_json()
+            audio_metadata = await websocket.receive_json() # TODO: Check validity of audio_metdata message
             # set the input track of these things
 
             # run the tasks

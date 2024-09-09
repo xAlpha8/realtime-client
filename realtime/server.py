@@ -93,6 +93,7 @@ class RealtimeServer:
         """
         Decrement the connection counter.
         """
+        # TODO: Log when number of connections < 0
         self._connections = max(self._connections - 1, 0)
 
     def get_app(self) -> FastAPI:

@@ -50,6 +50,7 @@ class WebsocketInputProcessor:
         message_stream (TextStream): The stream for input text messages.
         video_stream (VideoStream): The stream for input video data.
     """
+
     @property
     def sample_rate(self) -> int:
         return self._sample_rate
@@ -60,7 +61,9 @@ class WebsocketInputProcessor:
             raise ValueError("Sample rate must be a positive integer")
         self._sample_rate = value
 
-    def __init__(self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, sample_rate: int = 48000):
+    def __init__(
+        self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, sample_rate: int = 48000
+    ):
         self.audio_output_stream = audio_stream
         self.message_stream = message_stream
         self.video_stream = video_stream
@@ -107,6 +110,7 @@ class WebsocketOutputProcessor:
         video_stream (VideoStream): The video stream to send.
         byte_stream (ByteStream): The byte stream to send.
     """
+
     @property
     def sample_rate(self) -> int:
         return self._sample_rate
@@ -117,8 +121,9 @@ class WebsocketOutputProcessor:
             raise ValueError("Sample rate must be a positive integer")
         self._sample_rate = value
 
-    def __init__(self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, byte_stream: ByteStream
-):
+    def __init__(
+        self, audio_stream: AudioStream, message_stream: TextStream, video_stream: VideoStream, byte_stream: ByteStream
+    ):
         self.audio_stream = audio_stream
         self.message_stream = message_stream
         self.video_stream = video_stream
@@ -128,13 +133,12 @@ class WebsocketOutputProcessor:
     def setOutputTrack(self, track: TextStream):
         self._outputTrack = track
 
-    async def run(
-        self):
+    async def run(self):
         """
         Starts tasks to process and send byte and text streams.
         """
         # TODO: Implement video stream and audio stream processing
-        await asyncio.gather(self.task(self.byte_stream), self.task(self.message_stream))
+        await asyncio.gather(self.task(self.byte_stream), self.task(self.message_stream), self.task(self.audio_stream))
 
     async def task(self, input_stream):
         """

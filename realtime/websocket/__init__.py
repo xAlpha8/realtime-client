@@ -46,7 +46,7 @@ def websocket(path: str = "/"):
                 if not isinstance(output_streams, (list, tuple)):
                     output_streams = (output_streams,)
 
-                aq, vq, tq = None, None, None
+                aq, vq, tq, bq = None, None, None, None
                 for s in output_streams:
                     if isinstance(s, AudioStream):
                         aq = s
@@ -57,10 +57,13 @@ def websocket(path: str = "/"):
                     elif isinstance(s, ByteStream):
                         bq = s
 
-
                 # TODO: Update the default sample rate to be consistent across all plugins
-                websocket_input_processor = WebsocketInputProcessor(audio_stream=audio_input_q, message_stream=text_input_q, video_stream=video_input_q)
-                websocket_output_processor = WebsocketOutputProcessor(audio_stream=aq, message_stream=tq, video_stream=vq, byte_stream=bq)
+                websocket_input_processor = WebsocketInputProcessor(
+                    audio_stream=audio_input_q, message_stream=text_input_q, video_stream=video_input_q
+                )
+                websocket_output_processor = WebsocketOutputProcessor(
+                    audio_stream=aq, message_stream=tq, video_stream=vq, byte_stream=bq
+                )
 
                 create_and_add_ws_handler(path, websocket_input_processor, websocket_output_processor)
 
@@ -77,4 +80,5 @@ def websocket(path: str = "/"):
 
         rt_func = RealtimeFunction(wrapper)
         return rt_func
+
     return decorator

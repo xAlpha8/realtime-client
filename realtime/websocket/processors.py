@@ -171,5 +171,9 @@ class WebsocketOutputProcessor:
             elif isinstance(audio_data, str):
                 json_data = {"type": "message", "data": audio_data, "timestamp": time.time()}
                 await self._outputTrack.put(json_data)
+            elif isinstance(audio_data, dict):
+                json_data = audio_data
+                json_data["type"] = "message"
+                await self._outputTrack.put(json_data)
             else:
                 raise ValueError(f"Unsupported data type: {type(audio_data)}")

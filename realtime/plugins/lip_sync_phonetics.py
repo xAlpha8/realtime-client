@@ -762,9 +762,7 @@ class LipSyncPhonetics(Plugin):
             lipsyncLang = opt.get("lipsyncLang", "en")
 
             while True:
-                logger.info("Waiting for input")
                 s = await self.input_queue.get()
-                logger.info("Received %s", s)
                 letters = list(s)
 
                 markdownWord = ""  # markdown word
@@ -880,56 +878,62 @@ class VisemeToAudio(Plugin):
         self.output_queue = TextStream()
 
     async def viseme_to_audio(self):
-        while True:
-            viseme_obj = await self.input_queue.get()
-            if "text" in viseme_obj:
-                ssml = "<speak>"
-                for i, x in enumerate(viseme_obj["text"]):
-                    # Add mark
-                    if i > 0:
-                        ssml += f" <mark name='{x['mark']}'/>"
+        try:
+            while True:
+                viseme_obj = await self.input_queue.get()
+                # Print and log the viseme object
+                logger.info(f"Viseme object: {viseme_obj}")
+                if "text" in viseme_obj:
+                    ssml = "<speak>"
+                    for i, x in enumerate(viseme_obj["text"]):
+                        # Add mark
+                        if i > 0:
+                            ssml += f" <mark name='{x['mark']}'/>"
 
-                    # Add word
-                    word = x["word"]
-                    word = word.replace("&", "&amp;")
-                    word = word.replace("<", "&lt;")
-                    word = word.replace(">", "&gt;")
-                    word = word.replace('"', "&quot;")
-                    word = word.replace("'", "&apos;")
-                    word = regex.sub(r"^\p{Dash_Punctuation}$", '<break time="750ms"/>', word)
-                    ssml += word
+                        # Add word
+                        word = x["word"]
+                        word = word.replace("&", "&amp;")
+                        word = word.replace("<", "&lt;")
+                        word = word.replace(">", "&gt;")
+                        word = word.replace('"', "&quot;")
+                        word = word.replace("'", "&apos;")
+                        word = regex.sub(r"^\p{Dash_Punctuation}$", '<break time="750ms"/>', word)
+                        ssml += word
 
-                ssml += "</speak>"
-                print(ssml)
+                    ssml += "</speak>"
+                    print(ssml)
 
-                headers = {"Content-Type": "application/json; charset=utf-8"}
+                    headers = {"Content-Type": "application/json; charset=utf-8"}
 
-                body = {
-                    "input": {"ssml": ssml},
-                    "voice": {
-                        "languageCode": "en-GB",
-                        "name": viseme_obj["voice"],
-                    },
-                    "audioConfig": {
-                        "audioEncoding": "OGG-OPUS",
-                        "speakingRate": 0.75,
-                        "pitch": viseme_obj["pitch"],
-                        "volumeGainDb": 0,
-                    },
-                    "enableTimePointing": [1],  # Timepoint information for mark tags
-                }
+                    body = {
+                        "input": {"ssml": ssml},
+                        "voice": {
+                            "languageCode": "en-GB",
+                            "name": viseme_obj["voice"],
+                        },
+                        "audioConfig": {
+                            "audioEncoding": "OGG-OPUS",
+                            "speakingRate": 1.1,
+                            "pitch": viseme_obj["pitch"],
+                            "volumeGainDb": 0,
+                        },
+                        "enableTimePointing": [1],  # Timepoint information for mark tags
+                    }
 
-                async def fetch_data():
-                    async with aiohttp.ClientSession() as session:
-                        url = "https://eu-texttospeech.googleapis.com/v1beta1/text:synthesize?key=AIzaSyDKnQEdeUyNeFMQciUkHDuX4AbeplQyuWg"
-                        async with session.post(url, headers=headers, json=body) as response:
-                            return await response.json()
+                    async def fetch_data():
+                        async with aiohttp.ClientSession() as session:
+                            url = "https://eu-texttospeech.googleapis.com/v1beta1/text:synthesize?key=AIzaSyDKnQEdeUyNeFMQciUkHDuX4AbeplQyuWg"
+                            async with session.post(url, headers=headers, json=body) as response:
+                                return await response.json()
 
-                data = await fetch_data()
-                viseme_obj["data"] = data
+                    data = await fetch_data()
+                    viseme_obj["data"] = data
 
-            self.output_queue.put(viseme_obj)
-        # return line
+                await self.output_queue.put(viseme_obj)
+        except Exception as e:
+            logger.error(f"Error in viseme_to_audio: {e}")
+            raise asyncio.CancelledError
+                # return line
 
     def run(self, input_queue: TextStream) -> TextStream:
         self.input_queue = input_queue

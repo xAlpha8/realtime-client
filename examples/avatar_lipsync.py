@@ -35,7 +35,7 @@ class Chatbot:
             system_prompt="You are a language tutor who teaches English.\
             You will always reply with a JSON object.\
             Each message has a text and facialExpression property.\
-            The text property is a short response to the user (no emoji).\
+            The text property is a response to the user (no emoji).\
             The different facial expressions are: smile, sad, angry, and default.",
             temperature=0.9,
             response_format={"type": "json_object"},

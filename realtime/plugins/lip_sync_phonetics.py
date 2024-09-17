@@ -753,7 +753,7 @@ class LipSyncPhonetics(Plugin):
         logger.info("Starting lip sync")
         try:
             if opt is None:
-                opt = {"lipsyncLang": "en", "ttsVoice": "en-GB-Standard-A", "ttsRate": 1, "ttsPitch": 0}
+                opt = {"lipsyncLang": "en", "ttsVoice": "en-GB-Wavenet-A", "ttsRate": 0.9, "ttsPitch": 0}
 
             # Regular expressions
             dividersSentence = regex.compile(r"[!\.\?\n\p{Extended_Pictographic}]", regex.U)
@@ -913,7 +913,7 @@ class VisemeToAudio(Plugin):
                         },
                         "audioConfig": {
                             "audioEncoding": "OGG-OPUS",
-                            "speakingRate": 1.1,
+                            "speakingRate": 0.9,
                             "pitch": viseme_obj["pitch"],
                             "volumeGainDb": 0,
                         },

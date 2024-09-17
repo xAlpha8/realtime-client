@@ -1,7 +1,7 @@
 import json
 import logging
 
-import realtime as rt
+import outspeed as sp
 
 # Set up basic logging configuration
 logging.basicConfig(level=logging.INFO)
@@ -12,7 +12,7 @@ This tells the realtime server which functions to run.
 """
 
 
-@rt.App()
+@sp.App()
 class VoiceBot:
     """
     VoiceBot class represents a voice-based AI assistant.
@@ -30,8 +30,8 @@ class VoiceBot:
         """
         pass
 
-    @rt.streaming_endpoint()
-    async def run(self, audio_input_queue: rt.AudioStream, text_input_queue: rt.TextStream) -> rt.AudioStream:
+    @sp.streaming_endpoint()
+    async def run(self, audio_input_queue: sp.AudioStream, text_input_queue: sp.TextStream) -> sp.AudioStream:
         """
         Handle the main processing loop for the VoiceBot.
 
@@ -40,36 +40,36 @@ class VoiceBot:
         generate audio output.
 
         Args:
-            audio_input_queue (rt.AudioStream): The input stream of audio data.
+            audio_input_queue (sp.AudioStream): The input stream of audio data.
 
         Returns:
-            rt.AudioStream: The output stream of generated audio responses.
+            sp.AudioStream: The output stream of generated audio responses.
         """
         # Initialize the AI services
-        self.deepgram_node = rt.DeepgramSTT(sample_rate=8000)
-        self.llm_node = rt.FireworksLLM(
+        self.deepgram_node = sp.DeepgramSTT(sample_rate=8000)
+        self.llm_node = sp.FireworksLLM(
             system_prompt="You are a helpful assistant. Keep your answers very short. No special characters in responses.",
         )
-        self.token_aggregator_node = rt.TokenAggregator()
-        self.tts_node = rt.CartesiaTTS(
+        self.token_aggregator_node = sp.TokenAggregator()
+        self.tts_node = sp.CartesiaTTS(
             voice_id="95856005-0332-41b0-935f-352e296aa0df",
         )
 
         # Set up the AI service pipeline
-        deepgram_stream: rt.TextStream = self.deepgram_node.run(audio_input_queue)
+        deepgram_stream: sp.TextStream = self.deepgram_node.run(audio_input_queue)
 
-        text_input_queue = rt.map(text_input_queue, lambda x: json.loads(x).get("content"))
+        text_input_queue = sp.map(text_input_queue, lambda x: json.loads(x).get("content"))
 
-        llm_input_queue: rt.TextStream = rt.merge(
+        llm_input_queue: sp.TextStream = sp.merge(
             [deepgram_stream, text_input_queue],
         )
 
-        llm_token_stream: rt.TextStream
-        chat_history_stream: rt.TextStream
+        llm_token_stream: sp.TextStream
+        chat_history_stream: sp.TextStream
         llm_token_stream, chat_history_stream = self.llm_node.run(llm_input_queue)
 
-        token_aggregator_stream: rt.TextStream = self.token_aggregator_node.run(llm_token_stream)
-        tts_stream: rt.AudioStream = self.tts_node.run(token_aggregator_stream)
+        token_aggregator_stream: sp.TextStream = self.token_aggregator_node.run(llm_token_stream)
+        tts_stream: sp.AudioStream = self.tts_node.run(token_aggregator_stream)
 
         return tts_stream
 

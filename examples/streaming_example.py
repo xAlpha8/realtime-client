@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Tuple
 
-import realtime as rt
+import outspeed as sp
 
 logging.basicConfig(level=logging.INFO)
 
@@ -11,13 +11,13 @@ Wrapping your class with @realtime.App() will tell the realtime server which fun
 """
 
 
-@rt.App()
+@sp.App()
 class ReplayBot:
     async def setup(self):
         pass
 
-    @rt.streaming_endpoint()
-    async def run(self, audio_input_queue: rt.AudioStream, video_input_queue: rt.VideoStream):
+    @sp.streaming_endpoint()
+    async def run(self, audio_input_queue: sp.AudioStream, video_input_queue: sp.VideoStream):
         return (audio_input_queue, video_input_queue, None)
 
     async def teardown(self):

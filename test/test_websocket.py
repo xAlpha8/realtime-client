@@ -5,9 +5,9 @@ import pytest
 
 import websockets
 
-from realtime.server import RealtimeServer
-from realtime.streams import AudioStream, TextStream
-from realtime.websocket import websocket
+from outspeed.server import RealtimeServer
+from outspeed.streams import AudioStream, TextStream
+from outspeed.websocket import websocket
 
 server = RealtimeServer()
 server.PORT = 8000

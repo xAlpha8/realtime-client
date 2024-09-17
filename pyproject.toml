@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "realtime-client"
+name = "outspeed"
 version = "0.1.136"
 description = ""
-authors = ["Adapt <hello@getadapt.ai>"]
+authors = ["Outspeed <contact@outspeed.ai>"]
 readme = "README.md"
-packages = [{ include = "realtime" }]
+packages = [{ include = "outspeed" }]
 
 [tool.poetry.dependencies] # main dependency group
 aiohttp = "^3.9.5"

@@ -13,6 +13,7 @@ def check_and_load(x):
     print(f"Text type: {type(text)}")
     return text
 
+
 @rt.App()
 class Chatbot:
     """
@@ -50,9 +51,7 @@ class Chatbot:
 
         llm_token_stream, _ = llm_node.run(combined_text_stream)
 
-        json_text_stream = rt.map(
-            llm_token_stream.clone(), check_and_load 
-        )
+        json_text_stream = rt.map(llm_token_stream, check_and_load)
 
         lip_syncd_stream = lip_sync_node.run(json_text_stream)
 
@@ -67,4 +66,3 @@ class Chatbot:
 if __name__ == "__main__":
     v = Chatbot()
     v.start()
-

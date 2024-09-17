@@ -20,6 +20,7 @@ def get_websocket_handler(
         try:
             await websocket.accept()
             audio_metadata = await websocket.receive_json() # TODO: Check validity of audio_metdata message
+            logging.info("Received audio_metdata")
             # set the input track of these things
 
             # run the tasks

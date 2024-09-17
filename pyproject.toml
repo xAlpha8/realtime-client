@@ -36,6 +36,7 @@ google-cloud-vision = { version = "^3.7.2", optional = true }
 torch = { version = "^2.3.0", optional = true }
 torchaudio = { version = "^2.3.0", optional = true }
 torchvision = { version = "^0.18.0", optional = true }
+regex = "^2024.9.11"
 
 [tool.poetry.extras]
 plugins = [

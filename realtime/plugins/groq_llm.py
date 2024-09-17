@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -109,6 +110,8 @@ class GroqLLM(Plugin):
                         await self.output_queue.put(chunk.choices[0].delta.content)
             else:
                 self._history[-1]["content"] = chunk_stream.choices[0].message.content
+                logging.info("LLM output")
+                logging.info(chunk_stream.choices[0].message.content)
                 await self.output_queue.put(chunk_stream.choices[0].message.content)
                 tracing.register_event(tracing.Event.LLM_TTFB)
 

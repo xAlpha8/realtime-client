@@ -88,6 +88,8 @@ class WebsocketInputProcessor:
         while True:
             try:
                 data = await self._inputTrack.get()
+                logging.info("received data")
+                logging.info(data)
                 if data.get("type") == "message":
                     await self.message_stream.put(data.get("data"))
                 elif data.get("type") == "audio":

@@ -29,6 +29,7 @@ try:
     from .plugins.eleven_labs_tts import ElevenLabsTTS  # noqa: F401
     from .plugins.fireworks_llm import FireworksLLM  # noqa: F401
     from .plugins.groq_llm import GroqLLM  # noqa: F401
+    from .plugins.lip_sync_phonetics import LipSyncPhonetics, VisemeToAudio  # noqa: F401
     from .plugins.token_aggregator import TokenAggregator  # noqa: F401
     from .streaming_endpoint import streaming_endpoint  # noqa: F401
     from .streams import AudioStream, TextStream, VideoStream  # noqa: F401
@@ -51,6 +52,8 @@ __all__ = [
     "ImageData",
     "TextData",
     "CartesiaTTS",
+    "LipSyncPhonetics",
+    "VisemeToAudio",
     "DeepgramSTT",
     "GroqLLM",
     "TokenAggregator",

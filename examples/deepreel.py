@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Tuple
 import websockets
 
 import realtime as rt
-import yappi
 
 # Set up basic logging configuration
 logging.basicConfig(level=logging.INFO)

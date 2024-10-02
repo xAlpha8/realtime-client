@@ -9,6 +9,7 @@ from realtime.data import AudioData
 from realtime.plugins.base_plugin import Plugin
 from realtime.streams import AudioStream, ByteStream, TextStream
 from realtime.utils import tracing
+from realtime.data import SessionData
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,10 @@ class ElevenLabsTTS(Plugin):
                     # Get the next text chunk from the input queue
                     text_chunk = await self.input_queue.get()
                     if not text_chunk:
+                        continue
+
+                    if isinstance(text_chunk, SessionData):
+                        await self.output_queue.put(text_chunk)
                         continue
 
                     self._generating = True

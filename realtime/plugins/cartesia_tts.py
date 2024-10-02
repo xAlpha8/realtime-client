@@ -183,7 +183,7 @@ class CartesiaTTS(Plugin):
                         total_audio_bytes += len(audio_bytes)
                         if is_first_chunk:
                             tracing.register_event(tracing.Event.TTS_TTFB)
-                            logging.info("Got TTS first chunk", time.time())
+                            logging.info(f"Got TTS first chunk {time.time()}")
                             is_first_chunk = False
                         await self.output_queue.put(AudioData(audio_bytes, sample_rate=self.output_sample_rate))
                     elif response["type"] == "done":

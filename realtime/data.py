@@ -230,7 +230,10 @@ class ImageData:
         elif isinstance(self.data, np.ndarray):
             return VideoFrame.from_ndarray(self.data, format="rgb24")
         elif isinstance(self.data, Image.Image):
-            return VideoFrame.from_image(self.data)
+            image_frame = VideoFrame.from_image(self.data)
+            image_frame.pts = self.get_pts()
+            image_frame.time_base = fractions.Fraction(1, self.frame_rate)
+            return image_frame
         elif isinstance(self.data, VideoFrame):
             return self.data
         else:
